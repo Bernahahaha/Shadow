@@ -1,0 +1,605 @@
+--// Load Rayfield Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+--// Create Window
+local Window = Rayfield:CreateWindow({
+    Name = "ShadowCore",
+    LoadingTitle = "Shadows Code",
+    LoadingSubtitle = "By Sin",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "MIJBarbarinGUI", -- Create a custom folder for your hub/game
+        FileName = "MainConfig"
+    },
+    Discord = {
+        Enabled = true,
+        Invite = "https://discord.gg/vSGuzg75", -- The Discord invite code, do not include discord.gg/
+        RememberJoins = false -- Set to false to make them join every time they load
+    },
+    KeySystem = true, -- Enable Rayfield's built-in key system
+    KeySettings = {
+        Title = "Shadow Hub",
+        Subtitle = "ShadowKey System",
+        Note = "Get the key from our discord (https://discord.gg/vSGuzg75)",
+        FileName = "SiriusKey",
+        SaveKey = false,
+        GrabKeyFromSite = false, -- Set to true if you want to fetch key from a URL
+        Key = "MIJSHADOWKEY"
+    }
+})
+
+local MainTab = Window:CreateTab("Main", nil)
+MainTab:CreateSection("Main Features")
+
+
+-- WalkSpeed
+MainTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 100},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(Value)
+        local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.WalkSpeed = Value end
+    end
+})
+
+
+
+
+--Advance Esp Players
+local ESPTab = Window:CreateTab("ESP", nil)
+ESPTab:CreateSection("ESP Features")
+
+local RunService = game:GetService("RunService")
+local Players = game.Players
+local LocalPlayer = Players.LocalPlayer
+
+ESPTab:CreateToggle({
+    Name = "ESP Players",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.ESPPlayers = Value
+        
+        local espData = {}
+
+        local function createHealthBar(character)
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ESPHealthBar"
+            billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
+            billboard.Size = UDim2.new(4, 0, 0.5, 0)
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
+            billboard.AlwaysOnTop = true
+
+            local background = Instance.new("Frame")
+            background.Size = UDim2.new(1, 0, 1, 0)
+            background.BackgroundColor3 = Color3.new(0, 0, 0)
+            background.BackgroundTransparency = 0.6
+            background.BorderSizePixel = 0
+            background.Parent = billboard
+
+            local healthBar = Instance.new("Frame")
+            healthBar.Name = "HealthBar"
+            healthBar.Size = UDim2.new(1, 0, 1, 0)
+            healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            healthBar.BorderSizePixel = 0
+            healthBar.Parent = background
+
+            billboard.Parent = character
+
+            return healthBar
+        end
+
+        local function createCoordLabel(character)
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ESPCoords"
+            billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
+            billboard.Size = UDim2.new(4, 0, 1, 0)
+            billboard.StudsOffset = Vector3.new(0, 4.5, 0)
+            billboard.AlwaysOnTop = true
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextColor3 = Color3.new(1, 1, 1)
+            textLabel.TextStrokeTransparency = 0
+            textLabel.Font = Enum.Font.SourceSansBold
+            textLabel.TextSize = 14
+            textLabel.Text = ""
+            textLabel.Parent = billboard
+
+            billboard.Parent = character
+
+            return textLabel
+        end
+        
+        local function createNameLabel(character, playerName)
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ESPName"
+            billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
+            billboard.Size = UDim2.new(4, 0, 1, 0)
+            billboard.StudsOffset = Vector3.new(0, 5.5, 0)
+            billboard.AlwaysOnTop = true
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextColor3 = Color3.new(1, 1, 0) -- Yellow color for name
+            textLabel.TextStrokeTransparency = 0
+            textLabel.Font = Enum.Font.SourceSansBold
+            textLabel.TextSize = 16
+            textLabel.Text = playerName
+            textLabel.Parent = billboard
+
+            billboard.Parent = character
+
+            return textLabel
+        end
+
+        spawn(function()
+            while _G.ESPPlayers do
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local char = player.Character
+
+                        -- Highlight
+                        if not char:FindFirstChild("ESPHighlight") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "ESPHighlight"
+                            highlight.Adornee = char
+                            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            highlight.Parent = char
+                        end
+
+                        -- Health bar
+                        if not char:FindFirstChild("ESPHealthBar") then
+                            local healthBar = createHealthBar(char)
+                            espData[char] = espData[char] or {}
+                            espData[char].HealthBar = healthBar
+                        end
+
+                        -- Coordinate label
+                        if not char:FindFirstChild("ESPCoords") then
+                            local coordLabel = createCoordLabel(char)
+                            espData[char] = espData[char] or {}
+                            espData[char].CoordLabel = coordLabel
+                        end
+                        
+                        -- Name label
+                        if not char:FindFirstChild("ESPName") then
+                            local nameLabel = createNameLabel(char, player.Name)
+                            espData[char] = espData[char] or {}
+                            espData[char].NameLabel = nameLabel
+                        end
+
+                        -- Update health bar and coordinates
+                        local humanoid = char:FindFirstChildOfClass("Humanoid")
+                        if humanoid then
+                            local healthBar = espData[char] and espData[char].HealthBar
+                            if healthBar then
+                                local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                                healthBar.Size = UDim2.new(healthPercent, 0, 1, 0)
+                                healthBar.BackgroundColor3 = Color3.fromHSV(healthPercent * 0.3, 1, 1)
+                            end
+                        end
+
+                        local coordLabel = espData[char] and espData[char].CoordLabel
+                        if coordLabel then
+                            local pos = char.HumanoidRootPart.Position
+                            coordLabel.Text = string.format("X: %.1f Y: %.1f Z: %.1f", pos.X, pos.Y, pos.Z)
+                        end
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+
+        if not Value then
+            for _, player in pairs(Players:GetPlayers()) do
+                local char = player.Character
+                if char then
+                    local highlight = char:FindFirstChild("ESPHighlight")
+                    if highlight then highlight:Destroy() end
+                    local healthBarGui = char:FindFirstChild("ESPHealthBar")
+                    if healthBarGui then healthBarGui:Destroy() end
+                    local coordLabelGui = char:FindFirstChild("ESPCoords")
+                    if coordLabelGui then coordLabelGui:Destroy() end
+                    local nameLabelGui = char:FindFirstChild("ESPName")
+                    if nameLabelGui then nameLabelGui:Destroy() end
+                end
+            end
+            espData = {}
+        end
+    end
+})
+
+
+-- ESP Items
+ESPTab:CreateToggle({
+    Name = "ESP Items",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.ESPItems = Value
+        while _G.ESPItems do
+            for _, item in pairs(workspace:GetDescendants()) do
+                if item:IsA("Tool") or (item:IsA("Model") and item:FindFirstChild("Handle")) then
+                    if not item:FindFirstChild("ESPHighlight") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "ESPHighlight"
+                        highlight.Adornee = item
+                        highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.Parent = item
+                    end
+                end
+            end
+            task.wait(2)
+        end
+        for _, item in pairs(workspace:GetDescendants()) do
+            if item:FindFirstChild("ESPHighlight") then
+                item.ESPHighlight:Destroy()
+            end
+        end
+    end
+})
+
+--extra admin Tab
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- Create Admin Tab
+local AdminTab = Window:CreateTab("Admin", nil)
+AdminTab:CreateSection("Teleport & Admin Commands")
+
+-- Teleport to Spawn Button
+AdminTab:CreateButton({
+    Name = "Teleport to Spawn",
+    Callback = function()
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local spawnPart = Workspace:FindFirstChild("SpawnLocation") -- Adjust if your spawn part has a different name
+
+        if spawnPart then
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = spawnPart.CFrame + Vector3.new(0, 5, 0)
+            else
+                warn("HumanoidRootPart not found!")
+            end
+        else
+            warn("Spawn location not found!")
+        end
+    end
+})
+
+--No Clip
+local RunService = game:GetService("RunService")
+local noclipEnabled = false
+local noclipConnection
+
+AdminTab:CreateToggle({
+    Name = "NoClip",
+    CurrentValue = false,
+    Callback = function(Value)
+        noclipEnabled = Value
+        
+        if noclipEnabled then
+            noclipConnection = RunService.Stepped:Connect(function()
+                local character = game.Players.LocalPlayer.Character
+                if character and character:FindFirstChild("Humanoid") and character:FindFirstChild("HumanoidRootPart") then
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+
+            -- Re-enable collisions when NoClip is off
+            local character = game.Players.LocalPlayer.Character
+            if character then
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end
+})
+
+
+local NightsTab = Window:CreateTab("Nights", nil)
+NightsTab:CreateSection("Nights Features")
+
+--esp Chests
+NightsTab:CreateToggle({
+    Name = "ESP Chests Only",
+    CurrentValue = false,
+    Callback = function(state)
+        _G.ItemChestESP = state
+
+        -- Remove ESP if turned off
+        if not state then
+            for _, v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("Highlight") and v.Name == "ItemChestESPHighlight" then
+                    v:Destroy()
+                elseif v:IsA("BillboardGui") and v.Name == "ItemChestDistanceLabel" then
+                    v:Destroy()
+                end
+            end
+            return
+        end
+
+        local chestNames = {
+            "Item Chest", "Item Chest2", "Item Chest3", "Item Chest4", "Item Chest5"
+        }
+
+        -- ESP loop
+        task.spawn(function()
+            while _G.ItemChestESP do
+                for _, chest in ipairs(workspace:GetDescendants()) do
+                    if chest:IsA("Model") and table.find(chestNames, chest.Name) then
+                        -- Add highlight
+                        if not chest:FindFirstChild("ItemChestESPHighlight") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "ItemChestESPHighlight"
+                            highlight.FillColor = Color3.fromRGB(255, 215, 0)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            highlight.Parent = chest
+                        end
+
+                        -- Add distance label (name + distance)
+                        if not chest:FindFirstChild("ItemChestDistanceLabel") then
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name = "ItemChestDistanceLabel"
+                            billboard.Size = UDim2.new(0, 150, 0, 30)
+                            billboard.StudsOffset = Vector3.new(0, 3, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = chest
+
+                            local textLabel = Instance.new("TextLabel")
+                            textLabel.Size = UDim2.new(1, 0, 1, 0)
+                            textLabel.BackgroundTransparency = 1
+                            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            textLabel.TextStrokeTransparency = 0
+                            textLabel.TextScaled = true
+                            textLabel.Parent = billboard
+                        end
+
+                        -- Update text
+                        local billboard = chest:FindFirstChild("ItemChestDistanceLabel")
+                        local playerPos = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if billboard and playerPos and chest.PrimaryPart then
+                            local textLabel = billboard:FindFirstChildOfClass("TextLabel")
+                            local distance = (playerPos.Position - chest.PrimaryPart.Position).Magnitude
+                            textLabel.Text = string.format("%s - %.1f m", chest.Name, distance)
+                        end
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+--Bring Items logs
+
+
+--Auto bring Scraps
+-- Create the toggle for auto bring
+local availableFoods = {
+    "Scraps",
+    "Bolt",
+    "Sheet Metal",
+    "UFO",
+    "Junk",
+    "Broken Fan",
+    "Broken Radio",
+    "UFO Component",
+    "Tyre",
+    "Broken Microwave",
+    "Metal Chair",
+    "Old Car Engine",
+    "Cultist Experiment",
+    "Washing Machine",
+    "Cultist Prototype",
+    "UFO Scrap",
+    "Log"
+}
+
+local selectedFoods = {}
+
+local FoodDropdown = NightsTab:CreateDropdown({
+    Name = "Select Items to Bring",
+    Options = availableFoods,
+    CurrentOption = {},
+    MultiSelect = true,
+    Callback = function(selected)
+        selectedFoods = selected
+    end
+})
+
+NightsTab:CreateToggle({
+    Name = "Auto Bring and Drop Items",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.AutoBringDropFood = Value
+
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local Workspace = game:GetService("Workspace")
+
+        local function bringAndDropFood()
+            while _G.AutoBringDropFood do
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp and #selectedFoods > 0 then
+                    local selectedLookup = {}
+                    for _, foodName in ipairs(selectedFoods) do
+                        selectedLookup[foodName] = true
+                    end
+
+                    local foundAny = false
+                    local broughtCount = 0
+
+                    for _, item in pairs(Workspace:GetDescendants()) do
+                        local itemName = item.Name
+                        if selectedLookup[itemName] then
+                            foundAny = true
+                            if item:IsA("Model") then
+                                if not item.PrimaryPart then
+                                    item.PrimaryPart = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
+                                end
+                                if item.PrimaryPart then
+                                    item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0, 3, 0))
+                                    task.delay(0.5, function()
+                                        if item.PrimaryPart then
+                                            item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(5, 0, 0))
+                                        end
+                                    end)
+                                    broughtCount = broughtCount + 1
+                                end
+                            elseif item:IsA("BasePart") then
+                                item.CFrame = hrp.CFrame * CFrame.new(0, 3, 0)
+                                task.delay(0.5, function()
+                                    if item and item.Parent then
+                                        item.CFrame = hrp.CFrame * CFrame.new(5, 0, 0)
+                                    end
+                                end)
+                                broughtCount = broughtCount + 1
+                            end
+                        end
+                    end
+
+                    if not foundAny then
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "ShadowCore Eye",
+                            Text = "No selected items found in the world!",
+                            Duration = 3
+                        })
+                    else
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Auto Bring",
+                            Text = "Brought " .. broughtCount .. " item(s) this cycle.",
+                            Duration = 3
+                        })
+                    end
+                end
+                task.wait(0.8)
+            end
+        end
+
+        if _G.AutoBringDropFood then
+            task.spawn(bringAndDropFood)
+        end
+    end
+})
+
+--bring food items
+
+-- Create the toggle for auto bring
+local availableFoods = {
+    "Morsel",
+    "Carrot",
+    "Berry",
+    "Bandage",
+    "Steak",
+    "MedKit",
+    "Apple",
+    "Cake",
+}
+
+local selectedFoods = {}
+
+local FoodDropdown = NightsTab:CreateDropdown({
+    Name = "Select Foods to Bring",
+    Options = availableFoods,
+    CurrentOption = {},
+    MultiSelect = true,
+    Callback = function(selected)
+        selectedFoods = selected
+    end
+})
+
+NightsTab:CreateToggle({
+    Name = "Auto Bring and Drop Foods",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.AutoBringDropFood = Value
+
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local Workspace = game:GetService("Workspace")
+
+        local function bringAndDropFood()
+            while _G.AutoBringDropFood do
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp and #selectedFoods > 0 then
+                    local selectedLookup = {}
+                    for _, foodName in ipairs(selectedFoods) do
+                        selectedLookup[foodName] = true
+                    end
+
+                    local foundAny = false
+                    local broughtCount = 0
+
+                    for _, item in pairs(Workspace:GetDescendants()) do
+                        local itemName = item.Name
+                        if selectedLookup[itemName] then
+                            foundAny = true
+                            if item:IsA("Model") then
+                                if not item.PrimaryPart then
+                                    item.PrimaryPart = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
+                                end
+                                if item.PrimaryPart then
+                                    item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0, 3, 0))
+                                    task.delay(0.5, function()
+                                        if item.PrimaryPart then
+                                            item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(5, 0, 0))
+                                        end
+                                    end)
+                                    broughtCount = broughtCount + 1
+                                end
+                            elseif item:IsA("BasePart") then
+                                item.CFrame = hrp.CFrame * CFrame.new(0, 3, 0)
+                                task.delay(0.5, function()
+                                    if item and item.Parent then
+                                        item.CFrame = hrp.CFrame * CFrame.new(5, 0, 0)
+                                    end
+                                end)
+                                broughtCount = broughtCount + 1
+                            end
+                        end
+                    end
+
+                    if not foundAny then
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "ShadowCore Eye",
+                            Text = "No selected food items found in the world!",
+                            Duration = 3
+                        })
+                    else
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Auto Bring",
+                            Text = "Brought " .. broughtCount .. " item(s) this cycle.",
+                            Duration = 3
+                        })
+                    end
+                end
+                task.wait(0.8)
+            end
+        end
+
+        if _G.AutoBringDropFood then
+            task.spawn(bringAndDropFood)
+        end
+    end
+})
