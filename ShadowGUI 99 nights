@@ -417,9 +417,9 @@ local KillAuraEnabled = false
 local attackRange = 30
 local attackCooldown = 0.5
 local lastAttackTimes = {}
-local weaponPriority = { "Old Axe", "Spear", "MorningStar" }
+local weaponPriority = {"Old Axe", "Good Axe", "Strong Axe", "Spear", "MorningStar", "Laser Sword", "Ice Sword"} -- ✅ Added here
 local useWhitelist = true
-local attackAllAtOnce = false -- NEW feature toggle
+local attackAllAtOnce = false
 local targetWhitelist = {}
 for _, name in ipairs(allTargets) do
     targetWhitelist[name] = true
@@ -444,7 +444,6 @@ local function isTargetValid(target, hrp)
 end
 
 -- UI Elements
-
 local rangeSlider = NightsTab:CreateSlider({
     Name = "Attack Range",
     Range = {5, 100},
@@ -489,7 +488,7 @@ local attackAllToggle = NightsTab:CreateToggle({
 
 local weaponDropdown = NightsTab:CreateDropdown({
     Name = "Weapon Priority",
-    Options = {"Old Axe", "Spear", "MorningStar"},
+    Options = {"Old Axe", "Good Axe", "Strong Axe", "Spear", "MorningStar", "Laser Sword", "Ice Sword"}, -- ✅ Added to UI dropdown
     CurrentOption = weaponPriority[1],
     MultiSelect = true,
     Callback = function(selection)
@@ -532,7 +531,6 @@ NightsTab:CreateToggle({
                     end
 
                     if attackAllAtOnce then
-                        -- Attack all valid targets immediately, no cooldown delays
                         local attackedCount = 0
                         for _, target in pairs(charactersFolder:GetChildren()) do
                             if isTargetValid(target, hrp) then
@@ -562,7 +560,6 @@ NightsTab:CreateToggle({
                         end
                         task.wait(attackCooldown)
                     else
-                        -- Attack with cooldown per target
                         for _, target in pairs(charactersFolder:GetChildren()) do
                             if isTargetValid(target, hrp) then
                                 local now = tick()
@@ -600,7 +597,7 @@ NightsTab:CreateToggle({
 
 
 
-})
+
 
 local Lighting = game:GetService("Lighting")
 local originalFog = {End = Lighting.FogEnd, Start = Lighting.FogStart}
@@ -628,6 +625,159 @@ NightsTab:CreateButton({
     Callback = function()
         for _, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
             v:Disable()
+        end
+    end
+})
+
+
+
+
+-- === ESP GUI Integration for Selected Items (NightsTab) ===
+NightsTab:CreateSection("Advanced Item ESP Features")
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- List of all possible items
+local allItems = {
+    "Scraps","Bolt","Sheet Metal","UFO","Junk",
+    "Broken Fan","Broken Radio","UFO Component","Tyre",
+    "Broken Microwave","Metal Chair","Old Car Engine",
+    "Cultist Experiment","Washing Machine","Cultist Prototype",
+    "UFO Scrap","Log"
+}
+
+-- State tables
+local SelectedItems = {}
+local ESPObjects = {}
+local ESPEnabled = false
+local AutoPickup = false
+local PickupDistance = 10 -- default distance
+
+-- === Create Checkbox Toggles for all items ===
+for _, itemName in ipairs(allItems) do
+    NightsTab:CreateToggle({
+        Name = itemName,
+        CurrentValue = false,
+        Callback = function(state)
+            SelectedItems[itemName] = state
+            if not state and ESPObjects[itemName] then
+                ESPObjects[itemName].Billboard:Destroy()
+                ESPObjects[itemName] = nil
+            end
+        end
+    })
+end
+
+-- === Pickup Distance Slider ===
+NightsTab:CreateSlider({
+    Name = "Pickup Distance",
+    Range = {1,100},
+    Increment = 1,
+    CurrentValue = PickupDistance,
+    Callback = function(val)
+        PickupDistance = val
+    end
+})
+
+-- === Auto Pickup Toggle ===
+NightsTab:CreateToggle({
+    Name = "Auto Teleport to Closest Item",
+    CurrentValue = false,
+    Callback = function(state)
+        AutoPickup = state
+    end
+})
+
+-- === Main ESP creation ===
+local function createESP(item)
+    if not item.PrimaryPart then
+        item.PrimaryPart = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
+        if not item.PrimaryPart then return end
+    end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPGui"
+    billboard.Adornee = item.PrimaryPart
+    billboard.Size = UDim2.new(0,100,0,40)
+    billboard.StudsOffset = Vector3.new(0,2,0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = item.PrimaryPart
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1,0,0.6,0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextSize = 14
+    textLabel.Text = item.Name
+    textLabel.Parent = billboard
+
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Size = UDim2.new(1,0,0.4,0)
+    distanceLabel.Position = UDim2.new(0,0,0.6,0)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    distanceLabel.Font = Enum.Font.Gotham
+    distanceLabel.TextSize = 12
+    distanceLabel.Text = "Distance: 0"
+    distanceLabel.Parent = billboard
+
+    ESPObjects[item] = {Billboard=billboard, DistanceLabel=distanceLabel}
+end
+
+-- === Update ESP each frame ===
+RunService.RenderStepped:Connect(function()
+    if not ESPEnabled then return end
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local closestItem, closestDist = nil, math.huge
+
+    for _, item in pairs(Workspace:GetDescendants()) do
+        if SelectedItems[item.Name] and item.PrimaryPart then
+            if not ESPObjects[item] then
+                createESP(item)
+            end
+
+            local distance = (item.PrimaryPart.Position - hrp.Position).Magnitude
+            local guiData = ESPObjects[item]
+            guiData.DistanceLabel.Text = string.format("Distance: %.1f", distance)
+
+            -- Color based on distance
+            if distance < 20 then
+                guiData.DistanceLabel.TextColor3 = Color3.fromRGB(0,255,0)
+            elseif distance < 50 then
+                guiData.DistanceLabel.TextColor3 = Color3.fromRGB(255,255,0)
+            else
+                guiData.DistanceLabel.TextColor3 = Color3.fromRGB(255,100,100)
+            end
+
+            if distance < closestDist then
+                closestDist = distance
+                closestItem = item
+            end
+        end
+    end
+
+    if AutoPickup and closestItem and closestDist <= PickupDistance then
+        hrp.CFrame = closestItem.PrimaryPart.CFrame + Vector3.new(0,3,0)
+    end
+end)
+
+-- === ESP Enable Toggle ===
+NightsTab:CreateToggle({
+    Name = "Enable ESP",
+    CurrentValue = false,
+    Callback = function(state)
+        ESPEnabled = state
+        if not state then
+            for _, data in pairs(ESPObjects) do
+                if data.Billboard then data.Billboard:Destroy() end
+            end
+            ESPObjects = {}
         end
     end
 })
