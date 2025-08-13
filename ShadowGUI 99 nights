@@ -1,4 +1,4 @@
--// Rayfield UI
+--// Rayfield UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 --// Window
@@ -12,7 +12,7 @@ local Window = Rayfield:CreateWindow({
         FileName = "MainConfig"
     },
     Discord = {
-        Enabled = true,-
+        Enabled = true,
         Invite = "vSGuzg75",
         RememberJoins = false
     },
@@ -963,4 +963,3 @@ NightsTab:CreateToggle({
 
 -- Done
 notify("ShadowCore", "GUI Loaded. Enjoy!", 4)
-
