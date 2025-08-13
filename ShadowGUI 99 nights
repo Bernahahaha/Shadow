@@ -22,7 +22,7 @@ local Window = Rayfield:CreateWindow({
         Subtitle = "ShadowKey System",
         Note = "Get the key from our discord (https://discord.gg/vSGuzg75)",
         FileName = "SiriusKey",
-        SaveKey = false,
+        SaveKey = true,
         GrabKeyFromSite = false, -- Set to true if you want to fetch key from a URL
         Key = "MIJSHADOWKEY"
     }
