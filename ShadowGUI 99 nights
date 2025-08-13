@@ -1,4 +1,4 @@
---// Rayfield UI
+-// Rayfield UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 --// Window
@@ -12,7 +12,7 @@ local Window = Rayfield:CreateWindow({
         FileName = "MainConfig"
     },
     Discord = {
-        Enabled = true,
+        Enabled = true,-
         Invite = "vSGuzg75",
         RememberJoins = false
     },
@@ -340,7 +340,7 @@ local bringList = {
     "Broken Fan","Broken Radio","UFO Component","Tyre",
     "Broken Microwave","Metal Chair","Old Car Engine",
     "Cultist Experiment","Washing Machine","Cultist Prototype",
-    "UFO Scrap","Fuel","Coal","Water","Food"
+    "UFO Scrap","Fuel","Coal","Water","Food","Morsel","Steak","Bandage","MedKit","Berry",
 }
 
 for _, name in ipairs(bringList) do
@@ -489,17 +489,31 @@ VisualTab:CreateToggle({
 -- TELEPORTS
 ----------------------------------------------------------------
 TeleportsTab:CreateSection("Quick Teleports")
+
 local tpLocations = {
-    ["Spawn"]  = function() local s = Workspace:FindFirstChild("SpawnLocation"); return s and s.CFrame + Vector3.new(0,5,0) end,
-    ["Camp"]   = function() local p = Workspace:FindFirstChild("Camp") or Workspace:FindFirstChild("Campfire"); return p and p.CFrame + Vector3.new(0,5,0) end,
-    ["Forest"] = function() local p = Workspace:FindFirstChild("Forest"); return p and (p.CFrame or (p:FindFirstChildWhichIsA("BasePart") and p:FindFirstChildWhichIsA("BasePart").CFrame)) end,
-    ["Cave"]   = function() local p = Workspace:FindFirstChild("Cave"); return p and (p.CFrame or (p:FindFirstChildWhichIsA("BasePart") and p:FindFirstChildWhichIsA("BasePart").CFrame)) end,
+    ["Spawn"]  = function()
+        local s = Workspace:FindFirstChild("SpawnLocation")
+        return s and s.CFrame + Vector3.new(0,5,0)
+    end,
+    ["SpawnLocation"] = function()
+        local p = Workspace:FindFirstChild("SpawnLocation")
+        return p and p.CFrame + Vector3.new(0,5,0)
+    end,
+    ["CraftingBench"] = function()
+        local p = Workspace:FindFirstChild("CraftingBench")
+        return p and (p.CFrame or (p:FindFirstChildWhichIsA("BasePart") and p:FindFirstChildWhichIsA("BasePart").CFrame))
+    end,
+    ["Scrapper"] = function()
+        local p = Workspace:FindFirstChild("Scrapper")
+        return p and (p.CFrame or (p:FindFirstChildWhichIsA("BasePart") and p:FindFirstChildWhichIsA("BasePart").CFrame))
+    end,
 }
 
 local chosenTP = "Spawn"
+
 TeleportsTab:CreateDropdown({
     Name = "Select Location",
-    Options = {"Spawn","Camp","Forest","Cave"},
+    Options = {"Spawn","SpawnLocation","CraftingBench","Scrapper"},
     CurrentOption = "Spawn",
     Callback = function(opt) chosenTP = opt end
 })
@@ -520,19 +534,42 @@ TeleportsTab:CreateButton({
     end
 })
 
+
 ----------------------------------------------------------------
 -- AUTO (placeholders for your logic)
 ----------------------------------------------------------------
 AutoTab:CreateSection("Automation")
+
 AutoTab:CreateToggle({
     Name = "Auto Farm Logs",
     CurrentValue = false,
-    Callback = function(v) notify("Auto Farm Logs", "State: "..tostring(v), 3) end
-})
-AutoTab:CreateToggle({
-    Name = "Auto Loot Chests",
-    CurrentValue = false,
-    Callback = function(v) notify("Auto Loot", "State: "..tostring(v), 3) end
+    Callback = function(enabled)
+        notify("Auto Farm Logs", "State: " .. tostring(enabled), 3)
+
+        if enabled then
+            task.spawn(function()
+                while enabled do
+                    -- Look for the Log model in Workspace
+                    local log = Workspace:FindFirstChild("Log")
+                    local hrp = getHRP()
+                    
+                    if log and hrp then
+                        -- Teleport to the Log model's primary part or first BasePart
+                        if log:IsA("Model") then
+                            local primary = log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart")
+                            if primary then
+                                hrp.CFrame = primary.CFrame + Vector3.new(0, 3, 0)
+                            end
+                        elseif log:IsA("BasePart") then
+                            hrp.CFrame = log.CFrame + Vector3.new(0, 3, 0)
+                        end
+                    end
+                    
+                    task.wait(1) -- adjust this delay for faster/slower teleporting
+                end
+            end)
+        end
+    end
 })
 
 ----------------------------------------------------------------
@@ -733,9 +770,11 @@ local SelectedItems = {}
 local ESPObjects = {}
 
 local allItems = {
-    "Scraps","Bolt","Sheet Metal","UFO","Junk","Broken Fan","Broken Radio","UFO Component","Tyre",
-    "Broken Microwave","Metal Chair","Old Car Engine","Cultist Experiment","Washing Machine","Cultist Prototype",
-    "UFO Scrap","Log"
+     "Log","Scraps","Bolt","Sheet Metal","UFO","Junk",
+    "Broken Fan","Broken Radio","UFO Component","Tyre",
+    "Broken Microwave","Metal Chair","Old Car Engine",
+    "Cultist Experiment","Washing Machine","Cultist Prototype",
+    "UFO Scrap","Fuel","Coal","Water","Food","Morsel","Steak","Bandage","MedKit","Berry",
 }
 
 for _, itemName in ipairs(allItems) do
@@ -856,5 +895,72 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+NightsTab:CreateToggle({
+    Name = "Tree Aura (Auto Chop)",
+    CurrentValue = false,
+    Callback = function(enabled)
+        TreeAuraEnabled = enabled
+        if TreeAuraEnabled then
+            print("[Tree Aura] Enabled")
+            task.spawn(function()
+                while TreeAuraEnabled do
+                    local char = LocalPlayer.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    if not hrp then
+                        task.wait(0.5)
+                        continue
+                    end
+
+                    local axe = findBestAxe()
+                    if not axe then
+                        warn("[Tree Aura] No axe found in inventory!")
+                        task.wait(1)
+                        continue
+                    end
+
+                    local foliageFolder = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Foliage")
+                    if not foliageFolder then
+                        task.wait(1)
+                        continue
+                    end
+
+                    for _, tree in pairs(foliageFolder:GetChildren()) do
+                        if isTreeValid(tree, hrp) then
+                            local now = tick()
+                            if not lastChopTimes[tree] or (now - lastChopTimes[tree]) >= chopCooldown then
+                                local args = {
+                                    tree,
+                                    axe,
+                                    "4_2356085033", -- ✅ This is usually the tree hit code
+                                    tree.PrimaryPart.CFrame,
+                                }
+                                local success, err = pcall(function()
+                                    RemoteToolDamage:InvokeServer(unpack(args))
+                                end)
+                                if success then
+                                    lastChopTimes[tree] = now
+                                else
+                                    warn("[Tree Aura] Chop failed:", err)
+                                end
+                                task.wait(0.1)
+                            end
+                        end
+                    end
+
+                    task.wait(0.1)
+                end
+            end)
+        else
+            print("[Tree Aura] Disabled")
+            lastChopTimes = {}
+        end
+    end,
+})
+
+
+
+
+
 -- Done
 notify("ShadowCore", "GUI Loaded. Enjoy!", 4)
+
