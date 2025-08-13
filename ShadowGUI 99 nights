@@ -389,217 +389,245 @@ NightsTab:CreateToggle({
     end
 })
 
---Bring Items logs
+--kill aura 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
+local LocalPlayer = Players.LocalPlayer
+local Inventory = LocalPlayer:WaitForChild("Inventory")
+local RemoteToolDamage = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("ToolDamageObject")
 
---Auto bring Scraps
--- Create the toggle for auto bring
-local availableFoods = {
-    "Scraps",
-    "Bolt",
-    "Sheet Metal",
-    "UFO",
-    "Junk",
-    "Broken Fan",
-    "Broken Radio",
-    "UFO Component",
-    "Tyre",
-    "Broken Microwave",
-    "Metal Chair",
-    "Old Car Engine",
-    "Cultist Experiment",
-    "Washing Machine",
-    "Cultist Prototype",
-    "UFO Scrap",
-    "Log"
+local allTargets = {
+    "Bunny",
+    "Cultist",
+    "Wolf",
+    "Alpha Wolf",
+    "Bear",
+    "Polar Bear",
+    "Alien",
+    "Alien Elite",
+    "Arctic Fox",
+    "Black Robe Cultists",
+    "Red Robe Cultists",
 }
 
-local selectedFoods = {}
+-- Configuration defaults
+local KillAuraEnabled = false
+local attackRange = 30
+local attackCooldown = 0.5
+local lastAttackTimes = {}
+local weaponPriority = { "Old Axe", "Spear", "MorningStar" }
+local useWhitelist = true
+local attackAllAtOnce = false -- NEW feature toggle
+local targetWhitelist = {}
+for _, name in ipairs(allTargets) do
+    targetWhitelist[name] = true
+end
 
-local FoodDropdown = NightsTab:CreateDropdown({
-    Name = "Select Items to Bring",
-    Options = availableFoods,
-    CurrentOption = {},
-    MultiSelect = true,
-    Callback = function(selected)
-        selectedFoods = selected
+local function findBestWeapon()
+    for _, weaponName in ipairs(weaponPriority) do
+        local weapon = Inventory:FindFirstChild(weaponName)
+        if weapon then
+            return weapon
+        end
     end
+    return nil
+end
+
+local function isTargetValid(target, hrp)
+    if not target or not target.PrimaryPart then return false end
+    if useWhitelist and not targetWhitelist[target.Name] then return false end
+    local dist = (target.PrimaryPart.Position - hrp.Position).Magnitude
+    if dist > attackRange then return false end
+    return true
+end
+
+-- UI Elements
+
+local rangeSlider = NightsTab:CreateSlider({
+    Name = "Attack Range",
+    Range = {5, 100},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = attackRange,
+    Callback = function(value)
+        attackRange = value
+        print("[Kill Aura] Attack Range set to", attackRange)
+    end,
+})
+
+local cooldownSlider = NightsTab:CreateSlider({
+    Name = "Attack Cooldown",
+    Range = {0.1, 2},
+    Increment = 0.05,
+    Suffix = " sec",
+    CurrentValue = attackCooldown,
+    Callback = function(value)
+        attackCooldown = value
+        print("[Kill Aura] Attack Cooldown set to", attackCooldown)
+    end,
+})
+
+local whitelistToggle = NightsTab:CreateToggle({
+    Name = "Use Target Whitelist",
+    CurrentValue = useWhitelist,
+    Callback = function(enabled)
+        useWhitelist = enabled
+        print("[Kill Aura] Use Whitelist:", useWhitelist)
+    end,
+})
+
+local attackAllToggle = NightsTab:CreateToggle({
+    Name = "Attack All Targets At Once",
+    CurrentValue = attackAllAtOnce,
+    Callback = function(enabled)
+        attackAllAtOnce = enabled
+        print("[Kill Aura] Attack All Targets At Once:", attackAllAtOnce)
+    end,
+})
+
+local weaponDropdown = NightsTab:CreateDropdown({
+    Name = "Weapon Priority",
+    Options = {"Old Axe", "Spear", "MorningStar"},
+    CurrentOption = weaponPriority[1],
+    MultiSelect = true,
+    Callback = function(selection)
+        if type(selection) == "table" then
+            weaponPriority = selection
+        else
+            weaponPriority = {selection}
+        end
+        print("[Kill Aura] Weapon Priority set to:", table.concat(weaponPriority, ", "))
+    end,
 })
 
 NightsTab:CreateToggle({
-    Name = "Auto Bring and Drop Items",
+    Name = "Kill Aura (Advanced)",
     CurrentValue = false,
-    Callback = function(Value)
-        _G.AutoBringDropFood = Value
-
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
-        local Workspace = game:GetService("Workspace")
-
-        local function bringAndDropFood()
-            while _G.AutoBringDropFood do
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp and #selectedFoods > 0 then
-                    local selectedLookup = {}
-                    for _, foodName in ipairs(selectedFoods) do
-                        selectedLookup[foodName] = true
+    Callback = function(enabled)
+        KillAuraEnabled = enabled
+        if KillAuraEnabled then
+            print("[Kill Aura] Enabled")
+            task.spawn(function()
+                while KillAuraEnabled do
+                    local char = LocalPlayer.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    if not hrp then
+                        task.wait(0.5)
+                        continue
                     end
 
-                    local foundAny = false
-                    local broughtCount = 0
+                    local weapon = findBestWeapon()
+                    if not weapon then
+                        warn("[Kill Aura] No weapon found in inventory!")
+                        task.wait(1)
+                        continue
+                    end
 
-                    for _, item in pairs(Workspace:GetDescendants()) do
-                        local itemName = item.Name
-                        if selectedLookup[itemName] then
-                            foundAny = true
-                            if item:IsA("Model") then
-                                if not item.PrimaryPart then
-                                    item.PrimaryPart = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
-                                end
-                                if item.PrimaryPart then
-                                    item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0, 3, 0))
-                                    task.delay(0.5, function()
-                                        if item.PrimaryPart then
-                                            item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(5, 0, 0))
-                                        end
-                                    end)
-                                    broughtCount = broughtCount + 1
-                                end
-                            elseif item:IsA("BasePart") then
-                                item.CFrame = hrp.CFrame * CFrame.new(0, 3, 0)
-                                task.delay(0.5, function()
-                                    if item and item.Parent then
-                                        item.CFrame = hrp.CFrame * CFrame.new(5, 0, 0)
-                                    end
+                    local charactersFolder = Workspace:FindFirstChild("Characters")
+                    if not charactersFolder then
+                        task.wait(1)
+                        continue
+                    end
+
+                    if attackAllAtOnce then
+                        -- Attack all valid targets immediately, no cooldown delays
+                        local attackedCount = 0
+                        for _, target in pairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(target, hrp) then
+                                local args = {
+                                    target,
+                                    weapon,
+                                    "3_2356085033",
+                                    target.PrimaryPart.CFrame,
+                                }
+                                local success, err = pcall(function()
+                                    RemoteToolDamage:InvokeServer(unpack(args))
                                 end)
-                                broughtCount = broughtCount + 1
+                                if success then
+                                    attackedCount = attackedCount + 1
+                                else
+                                    warn("[Kill Aura] ToolDamageObject invoke failed:", err)
+                                end
+                            end
+                        end
+
+                        if attackedCount > 0 then
+                            game:GetService("StarterGui"):SetCore("SendNotification", {
+                                Title = "Kill Aura",
+                                Text = "Attacked all " .. attackedCount .. " targets at once with " .. weapon.Name,
+                                Duration = 2,
+                            })
+                        end
+                        task.wait(attackCooldown)
+                    else
+                        -- Attack with cooldown per target
+                        for _, target in pairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(target, hrp) then
+                                local now = tick()
+                                if not lastAttackTimes[target] or (now - lastAttackTimes[target]) >= attackCooldown then
+                                    local args = {
+                                        target,
+                                        weapon,
+                                        "3_2356085033",
+                                        target.PrimaryPart.CFrame,
+                                    }
+                                    local success, err = pcall(function()
+                                        RemoteToolDamage:InvokeServer(unpack(args))
+                                    end)
+                                    if success then
+                                        lastAttackTimes[target] = now
+                                    else
+                                        warn("[Kill Aura] ToolDamageObject invoke failed:", err)
+                                    end
+                                    task.wait(0.1)
+                                end
                             end
                         end
                     end
 
-                    if not foundAny then
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "ShadowCore Eye",
-                            Text = "No selected items found in the world!",
-                            Duration = 3
-                        })
-                    else
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "Auto Bring",
-                            Text = "Brought " .. broughtCount .. " item(s) this cycle.",
-                            Duration = 3
-                        })
-                    end
+                    task.wait(0.1)
                 end
-                task.wait(0.8)
-            end
+            end)
+        else
+            print("[Kill Aura] Disabled")
+            lastAttackTimes = {}
         end
-
-        if _G.AutoBringDropFood then
-            task.spawn(bringAndDropFood)
-        end
-    end
+    end,
 })
 
---bring food items
 
--- Create the toggle for auto bring
-local availableFoods = {
-    "Morsel",
-    "Carrot",
-    "Berry",
-    "Bandage",
-    "Steak",
-    "MedKit",
-    "Apple",
-    "Cake",
-}
 
-local selectedFoods = {}
 
-local FoodDropdown = NightsTab:CreateDropdown({
-    Name = "Select Foods to Bring",
-    Options = availableFoods,
-    CurrentOption = {},
-    MultiSelect = true,
-    Callback = function(selected)
-        selectedFoods = selected
-    end
 })
+
+local Lighting = game:GetService("Lighting")
+local originalFog = {End = Lighting.FogEnd, Start = Lighting.FogStart}
+local noFog = false
 
 NightsTab:CreateToggle({
-    Name = "Auto Bring and Drop Foods",
+    Name = "No Fog",
     CurrentValue = false,
-    Callback = function(Value)
-        _G.AutoBringDropFood = Value
-
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
-        local Workspace = game:GetService("Workspace")
-
-        local function bringAndDropFood()
-            while _G.AutoBringDropFood do
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp and #selectedFoods > 0 then
-                    local selectedLookup = {}
-                    for _, foodName in ipairs(selectedFoods) do
-                        selectedLookup[foodName] = true
-                    end
-
-                    local foundAny = false
-                    local broughtCount = 0
-
-                    for _, item in pairs(Workspace:GetDescendants()) do
-                        local itemName = item.Name
-                        if selectedLookup[itemName] then
-                            foundAny = true
-                            if item:IsA("Model") then
-                                if not item.PrimaryPart then
-                                    item.PrimaryPart = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
-                                end
-                                if item.PrimaryPart then
-                                    item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0, 3, 0))
-                                    task.delay(0.5, function()
-                                        if item.PrimaryPart then
-                                            item:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(5, 0, 0))
-                                        end
-                                    end)
-                                    broughtCount = broughtCount + 1
-                                end
-                            elseif item:IsA("BasePart") then
-                                item.CFrame = hrp.CFrame * CFrame.new(0, 3, 0)
-                                task.delay(0.5, function()
-                                    if item and item.Parent then
-                                        item.CFrame = hrp.CFrame * CFrame.new(5, 0, 0)
-                                    end
-                                end)
-                                broughtCount = broughtCount + 1
-                            end
-                        end
-                    end
-
-                    if not foundAny then
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "ShadowCore Eye",
-                            Text = "No selected food items found in the world!",
-                            Duration = 3
-                        })
-                    else
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "Auto Bring",
-                            Text = "Brought " .. broughtCount .. " item(s) this cycle.",
-                            Duration = 3
-                        })
-                    end
-                end
-                task.wait(0.8)
-            end
+    Callback = function(enabled)
+        noFog = enabled
+        if enabled then
+            Lighting.FogEnd = 100000
+            Lighting.FogStart = 0
+        else
+            Lighting.FogEnd = originalFog.End
+            Lighting.FogStart = originalFog.Start
         end
+    end
+})
 
-        if _G.AutoBringDropFood then
-            task.spawn(bringAndDropFood)
+
+
+NightsTab:CreateButton({
+    Name = "Disable AFK Kick",
+    Callback = function()
+        for _, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+            v:Disable()
         end
     end
 })
