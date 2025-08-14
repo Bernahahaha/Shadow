@@ -1,191 +1,100 @@
-local Main = require(game:GetService("ReplicatedStorage"):WaitForChild("Fluent"))
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-local Window = Main:CreateWindow({
-    Title = "ShadowCore " .. Main.Version,
-    SubTitle = "By Sin",
-    TabWidth = 140, -- slightly smaller for mobile
-    Size = UDim2.fromOffset(350, 500), -- width: 350, height: 500
+-- Mobile-friendly size
+local Window = Fluent:CreateWindow({
+    Title = "Fluent " .. Fluent.Version,
+    SubTitle = "by dawid",
+    TabWidth = 140, -- smaller width for mobile
+    Size = UDim2.fromOffset(350, 500), -- mobile-friendly size
     Acrylic = true,
-    Theme = "Dark"
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "box" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
+    ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
+    Teleports = Window:AddTab({ Title = "Teleports", Icon = "map-pin" }),
+    Bring = Window:AddTab({ Title = "Bring", Icon = "arrow-down" })
 }
 
-do
-    Tabs.Main:AddParagraph({
-        Title = "Paragraph",
-        Content = "This is a paragraph.\nSecond line!"
-    })
+local Options = Fluent.Options
 
-    Tabs.Main:AddButton({
-        Title = "Button",
-        Description = "Very important button",
-        Callback = function()
-            Window:Dialog({
-                Title = "Title",
-                Content = "This is a dialog",
-                Buttons = {
-                    {
-                        Title = "Confirm",
-                        Callback = function()
-                            Window:Dialog({
-                                Title = "Another Dialog",
-                                Content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse mollis dolor eget erat mattis, id mollis mauris cursus. Proin ornare sollicitudin odio, id posuere diam luctus id.",
-                                Buttons = {
-                                    { Title = "Ok", Callback = function() print("Ok") end }
-                                }
-                            })
-                        end
-                    },
-                    {
-                        Title = "Cancel",
-                        Callback = function()
-                            print("Cancelled the dialog.")
-                        end
-                    }
-                }
-            })
-        end
-    })
-
-    local Toggle = Tabs.Main:AddToggle("Toggle", { Title = "Toggle", Default = false })
-    
-    local Slider = Tabs.Main:AddSlider("Slider", {
-        Title = "Slider",
-        Description = "This is a slider",
-        Default = 2.0,
-        Min = 0.0,
-        Max = 15.5,
-        Rounding = 1
-    })
-
-    local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
-        Title = "Dropdown",
-        Values = {"one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen"},
-        Multi = false,
-        Default = 1
-    })
-    Dropdown:SetValue("four")
-
-    local MultiDropdown = Tabs.Main:AddDropdown("MultiDropdown", {
-        Title = "Dropdown",
-        Description = "You can select multiple values.",
-        Values = {"one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen"},
-        Multi = true,
-        Default = {"seven","twelve"}
-    })
-    MultiDropdown:SetValue({three=true,five=true,seven=false})
-
-    local Colorpicker = Tabs.Main:AddColorpicker("Colorpicker", { Title = "Colorpicker", Default = Color3.fromRGB(96,205,255) })
-    local TColorpicker = Tabs.Main:AddColorpicker("TransparencyColorpicker", {
-        Title = "Colorpicker",
-        Description = "but you can change the transparency.",
-        Transparency = 0,
-        Default = Color3.fromRGB(96,205,255)
-    })
-
-    local Keybind = Tabs.Main:AddKeybind("Keybind", {
-        Title = "KeyBind",
-        Mode = "Hold",
-        Default = "LeftControl",
-        ChangedCallback = function(New)
-            print("Keybind changed:", New)
-        end
-    })
-
-    local Input = Tabs.Main:AddInput("Input", {
-        Title = "Input",
-        Default = "Default",
-        Numeric = false,
-        Finished = false,
-        Placeholder = "Placeholder text",
-        Callback = function(Value)
-            print("Input changed:", Value)
-        end
-    })
-
-    Toggle:OnChanged(function()
-        print("Toggle changed:", Main.Options["Toggle"].Value)
-    end)
-
-    Slider:OnChanged(function(Value)
-        print("Slider changed:", Value)
-    end)
-
-    Dropdown:OnChanged(function(Value)
-        print("Dropdown changed:", Value)
-    end)
-
-    MultiDropdown:OnChanged(function(Value)
-        local Values = {}
-        for Val, State in next, Value do
-            table.insert(Values, Val)
-        end
-        print("Multidropdown changed:", table.concat(Values, ", "))
-    end)
-
-    Colorpicker:OnChanged(function()
-        print("Colorpicker changed:", Colorpicker.Value)
-    end)
-
-    TColorpicker:OnChanged(function()
-        print("TColorpicker changed:", TColorpicker.Value, "Transparency:", TColorpicker.Transparency)
-    end)
-
-    task.spawn(function()
-        while true do
-            wait(1)
-            local state = Keybind:GetState()
-            if state then
-                print("Keybind is being held down")
-            end
-            if Main.Unloaded then break end
-        end
-    end)
-end
-
-do
-    local InterfaceSection = Tabs.Settings:AddSection("Interface")
-
-    InterfaceSection:AddDropdown("InterfaceTheme", {
-        Title = "Theme",
-        Description = "Changes the interface theme.",
-        Values = Main.Themes,
-        Default = Main.Theme,
-        Callback = function(Value)
-            Main:SetTheme(Value)
-        end
-    })
-
-    if Main.UseAcrylic then
-        InterfaceSection:AddToggle("AcrylicToggle", {
-            Title = "Acrylic",
-            Description = "The blurred background requires graphic quality 8+",
-            Default = Main.Acrylic,
-            Callback = function(Value)
-                Main:ToggleAcrylic(Value)
-            end
-        })
-    end
-
-    InterfaceSection:AddToggle("TransparentToggle", {
-        Title = "Transparency",
-        Description = "Makes the interface transparent.",
-        Default = Main.Transparency,
-        Callback = function(Value)
-            Main:ToggleTransparency(Value)
-        end
-    })
-
-    InterfaceSection:AddKeybind("MenuKeybind", { Title = "Minimize Bind", Default = "RightShift" })
-    Main.MinimizeKeybind = Main.Options.MenuKeybind
-end
-
-Main:Notify({
+-- Notifications
+Fluent:Notify({
     Title = "Fluent",
     Content = "The script has been loaded.",
-    Duration = 8
+    Duration = 5
 })
+
+-- Main Tab Example
+Tabs.Main:AddParagraph({ Title = "Welcome", Content = "This is your main hub!" })
+
+Tabs.Main:AddButton({
+    Title = "Test Dialog",
+    Description = "Opens a test dialog",
+    Callback = function()
+        Window:Dialog({
+            Title = "Dialog",
+            Content = "This is a test dialog.",
+            Buttons = {
+                { Title = "Confirm", Callback = function() print("Confirmed") end },
+                { Title = "Cancel", Callback = function() print("Cancelled") end }
+            }
+        })
+    end
+})
+
+-- Toggle Example
+local Toggle = Tabs.Main:AddToggle("MyToggle", {Title = "Toggle", Default = false})
+Toggle:OnChanged(function() print("Toggle:", Options.MyToggle.Value) end)
+
+-- Slider Example
+local Slider = Tabs.Main:AddSlider("Slider", {
+    Title = "Slider",
+    Default = 2,
+    Min = 0,
+    Max = 5,
+    Rounding = 1,
+    Callback = function(Value) print("Slider:", Value) end
+})
+Slider:SetValue(3)
+
+-- ESP Tab Example
+Tabs.ESP:AddToggle("ESPPlayers", { Title = "Enable ESP for Players", Default = false }):OnChanged(function()
+    print("ESP Players:", Options.ESPPlayers.Value)
+end)
+
+Tabs.ESP:AddToggle("ESPItems", { Title = "Enable ESP for Items", Default = false }):OnChanged(function()
+    print("ESP Items:", Options.ESPItems.Value)
+end)
+
+-- Teleports Tab Example
+Tabs.Teleports:AddButton({ Title = "Teleport to Spawn", Callback = function()
+    print("Teleported to Spawn") -- replace with actual teleport code
+end })
+Tabs.Teleports:AddButton({ Title = "Teleport to Boss", Callback = function()
+    print("Teleported to Boss") -- replace with actual teleport code
+end })
+
+-- Bring Tab Example
+Tabs.Bring:AddToggle("BringItems", { Title = "Bring Selected Items", Default = false }):OnChanged(function()
+    print("Bring Items:", Options.BringItems.Value)
+end)
+Tabs.Bring:AddButton({ Title = "Bring All Resources", Callback = function()
+    print("All resources brought") -- replace with actual bring code
+end })
+
+-- Addons
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetFolder("FluentScriptHub/specific-game")
+InterfaceManager:SetFolder("FluentScriptHub")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+Window:SelectTab(1)
+SaveManager:LoadAutoloadConfig()
