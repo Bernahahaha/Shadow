@@ -77,7 +77,23 @@ DiscordTab:CreateButton({
         end
     end
 })
-
+DiscordTab:CreateParagraph({
+    Title = "Gubat Discord",
+    Content = "Pasok kayo Dito Gaizz"
+})
+DiscordTab:CreateButton({
+    Name = "Copy Discord Link",
+    Callback = function()
+        local ok = pcall(function()
+            if setclipboard then setclipboard("https://discord.gg/ex55hXwgky") end
+        end)
+        if ok then
+            notify("Copied!", "Discord link copied to clipboard.", 3)
+        else
+            notify("Heads up", "Your executor blocked clipboard; copy it manually from the paragraph.", 5)
+        end
+    end
+})
 ----------------------------------------------------------------
 -- MAIN (Player)
 ----------------------------------------------------------------
@@ -629,6 +645,10 @@ NightsTab:CreateToggle({
     end
 })
 
+----------------------------------------------------------------
+--KILL AURA
+----------------------------------------------------------------
+
 NightsTab:CreateSection("Kill Aura (Advanced)")
 
 -- Kill Aura config/state
@@ -695,7 +715,6 @@ NightsTab:CreateDropdown({
     Options = weaponPriority,
     CurrentOption = weaponPriority[1],
     Callback = function(val)
-        -- Keeping full priority list static; you can reorder weaponPriority manually above if needed.
         notify("Kill Aura", "Priority head set to: "..tostring(val), 3)
     end
 })
@@ -717,6 +736,7 @@ NightsTab:CreateToggle({
                         task.wait(1)
                         continue
                     end
+                    local ownerId = weapon:GetAttribute("Owner") or ""
                     local charactersFolder = Workspace:FindFirstChild("Characters")
                     if not charactersFolder then task.wait(0.5) continue end
 
@@ -724,7 +744,7 @@ NightsTab:CreateToggle({
                         local hits = 0
                         for _, tgt in ipairs(charactersFolder:GetChildren()) do
                             if isTargetValid(tgt, hrp) then
-                                local args = {tgt, weapon, "3_2356085033", tgt.PrimaryPart.CFrame}
+                                local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
                                 pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
                                 hits += 1
                             end
@@ -740,7 +760,7 @@ NightsTab:CreateToggle({
                             if isTargetValid(tgt, hrp) then
                                 local now = tick()
                                 if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
-                                    local args = {tgt, weapon, "3_2356085033", tgt.PrimaryPart.CFrame}
+                                    local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
                                     pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
                                     lastAttackTimes[tgt] = now
                                     task.wait(0.05)
@@ -758,7 +778,12 @@ NightsTab:CreateToggle({
     end
 })
 
-NightsTab:CreateSection("Advanced Item ESP + Auto TP (Closest)")
+----------------------------------------------------------------
+-- ESP ITEM
+----------------------------------------------------------------
+ 
+
+NightsTab:CreateSection("ESP ITEMS")
 local ItemESPEnabled = false
 local AutoTPEnabled = false
 local AutoTPDistance = 10
@@ -891,6 +916,13 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+
+----------------------------------------------------------------
+-- TREE Aura
+----------------------------------------------------------------
+
+
+
 NightsTab:CreateSection("Tree Aura (Advanced)")
 
 -- Tree Aura Config
@@ -1004,81 +1036,73 @@ NightsTab:CreateToggle({
     end
 })
 
+----------------------------------------------------------------
+-- INSTANT OPEN chest
+----------------------------------------------------------------
 
-
--- Create NightsTab
-local NightsTab = Window:CreateTab("NightsTab", 4483362458)
-
--- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- RemoteEvent for opening chests
 local RequestOpenItemChest = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestOpenItemChest")
 
--- Chest model names we care about
+-- List of chest names
 local chestNames = {
-    ["Item Chest"] = true,
-    ["Item Chest2"] = true,
-    ["Alien Chest"] = true,
-    ["Item Chest3"] = true,
-    ["Item Chest4"] = true,
-    ["Item Chest5"] = true,
-    ["Item Chest6"] = true
+    "Item Chest",
+    "Item Chest2",
+    "Alien Chest",
+    "Item Chest3",
+    "Item Chest4",
+    "Item Chest5",
+    "Item Chest6"
 }
 
--- Function to hook a ProximityPrompt
-local function hookPrompt(prompt, chestModel)
-    if prompt:IsA("ProximityPrompt") and prompt.ObjectText == "Open Chest" then
-        prompt.HoldDuration = 0 -- Make it instant
-        prompt.Triggered:Connect(function()
-            if chestModel and chestModel:FindFirstChild("Main") then
-                chestModel.PrimaryPart = chestModel.Main
-                RequestOpenItemChest:FireServer(chestModel)
-            end
-        end)
+-- Make a chest open instantly when you interact
+local function makeInstantOpen(chest)
+    local itemChestPart = chest:FindFirstChild("ItemChest")
+    if itemChestPart then
+        local prompt = itemChestPart:FindFirstChildOfClass("ProximityPrompt")
+        if prompt then
+            prompt.HoldDuration = 0 -- No wait time
+            prompt.Triggered:Connect(function()
+                if chest:FindFirstChild("Main") then
+                    chest.PrimaryPart = chest.Main
+                    RequestOpenItemChest:FireServer(chest)
+                end
+            end)
+        end
     end
 end
 
--- Hook all chests
+-- Scan for all chests now
 local function hookAllChests()
-    local modelsFolder = Workspace:FindFirstChild("Items") and Workspace.Items:FindFirstChild("Models")
-    if not modelsFolder then
-        warn("Models folder not found in Workspace.Items")
-        return
-    end
+    local itemsFolder = Workspace:FindFirstChild("Items")
+    if not itemsFolder then return end
 
-    -- Hook existing
-    for _, model in ipairs(modelsFolder:GetChildren()) do
-        if chestNames[model.Name] and model:FindFirstChild("ItemChest") then
-            local prompt = model.ItemChest:FindFirstChildOfClass("ProximityPrompt")
-            if prompt then
-                hookPrompt(prompt, model)
-            end
+    for _, model in ipairs(itemsFolder:GetChildren()) do
+        if table.find(chestNames, model.Name) then
+            makeInstantOpen(model)
         end
     end
 
-    -- Hook future chests
-    modelsFolder.ChildAdded:Connect(function(model)
-        if chestNames[model.Name] and model:FindFirstChild("ItemChest") then
-            local prompt = model.ItemChest:FindFirstChildOfClass("ProximityPrompt")
-            if prompt then
-                hookPrompt(prompt, model)
-            end
+    -- Auto hook new chests
+    itemsFolder.ChildAdded:Connect(function(model)
+        if table.find(chestNames, model.Name) then
+            makeInstantOpen(model)
         end
     end)
 end
 
--- Button to enable instant open
+-- Button in NightsTab
 NightsTab:CreateButton({
     Name = "Enable Instant Chest Open",
     Callback = function()
         hookAllChests()
         Rayfield:Notify({
-            Title = "Instant Open Enabled",
-            Content = "All chests now open instantly when you interact.",
-            Duration = 4,
-            Image = 4483362458,
+            Title = "Enabled",
+            Content = "Chests will now open instantly when you interact.",
+            Duration = 4
         })
     end,
 })
