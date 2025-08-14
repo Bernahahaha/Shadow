@@ -921,8 +921,6 @@ end)
 -- TREE Aura
 ----------------------------------------------------------------
 
-
-
 NightsTab:CreateSection("Tree Aura (Advanced)")
 
 -- Tree Aura Config
@@ -934,9 +932,9 @@ local AutoCollect = false
 
 local targetFolderName = "LandMarks"
 local targetModelName = "Small Tree"
-local weaponName = "Old Axe"
+local weaponName = "Old Axe" -- default search name
 
--- Helper: Find Old Axe
+-- Helper: Find Axe (any weapon name works if you change weaponName)
 local function findAxe()
     local inv = LocalPlayer:FindFirstChild("Inventory")
     if not inv then return nil end
@@ -1005,7 +1003,8 @@ NightsTab:CreateToggle({
                         if isTreeValid(tree, hrp) then
                             local now = tick()
                             if not lastChopTimes[tree] or (now - lastChopTimes[tree]) >= chopCooldown then
-                                local args = {tree, axe, "4_2356085033", tree.PrimaryPart.CFrame}
+                                local ownerId = axe:GetAttribute("Owner") or 2356085033 -- fallback Old Axe owner ID
+                                local args = {tree, axe, "4_" .. tostring(ownerId), tree.PrimaryPart.CFrame}
                                 pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
                                 lastChopTimes[tree] = now
 
@@ -1035,7 +1034,6 @@ NightsTab:CreateToggle({
         end
     end
 })
-
 ----------------------------------------------------------------
 -- INSTANT OPEN chest
 ----------------------------------------------------------------
