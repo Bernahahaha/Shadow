@@ -4,7 +4,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 --// Window
 local Window = Rayfield:CreateWindow({
     Name = "ShadowCore - 99 Nights in the Forest",
-    LoadingTitle = "Shadows Code",
+    LoadingTitle = "Please Support ShadowCore",
     LoadingSubtitle = "By Sin",
     ConfigurationSaving = {
         Enabled = true,
@@ -13,14 +13,14 @@ local Window = Rayfield:CreateWindow({
     },
     Discord = {
         Enabled = true,
-        Invite = "vSGuzg75",
+        Invite = "https://discord.gg/vBEFRWTP",
         RememberJoins = false
     },
     KeySystem = true,
     KeySettings = {
         Title = "Shadow Hub",
         Subtitle = "ShadowKey System",
-        Note = "Get the key from our discord (https://discord.gg/)",
+        Note = "Get the key from our discord (https://discord.gg/vBEFRWTP)",
         FileName = "SiriusKey",
         SaveKey = true,
         GrabKeyFromSite = false,
@@ -488,50 +488,46 @@ VisualTab:CreateToggle({
 ----------------------------------------------------------------
 -- TELEPORTS
 ----------------------------------------------------------------
-TeleportsTab:CreateSection("Quick Teleports")
+-- Camp coordinates
+local CampLocation = Vector3.new(8, 4, 7)
 
-local tpLocations = {
-    ["Spawn"]  = function()
-        local s = Workspace:FindFirstChild("SpawnLocation")
-        return s and s.CFrame + Vector3.new(0,5,0)
-    end,
-    ["SpawnLocation"] = function()
-        local p = Workspace:FindFirstChild("SpawnLocation")
-        return p and p.CFrame + Vector3.new(0,5,0)
-    end,
-    ["CraftingBench"] = function()
-        local p = Workspace:FindFirstChild("CraftingBench")
-        return p and (p.CFrame or (p:FindFirstChildWhichIsA("BasePart") and p:FindFirstChildWhichIsA("BasePart").CFrame))
-    end,
-    ["Scrapper"] = function()
-        local p = Workspace:FindFirstChild("Scrapper")
-        return p and (p.CFrame or (p:FindFirstChildWhichIsA("BasePart") and p:FindFirstChildWhichIsA("BasePart").CFrame))
-    end,
-}
+-- Function to get HumanoidRootPart
+local function getHRP()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    return character:FindFirstChild("HumanoidRootPart")
+end
 
-local chosenTP = "Spawn"
+-- Teleport function
+local function teleportTo(location)
+    local hrp = getHRP()
+    if hrp then
+        hrp.CFrame = CFrame.new(location + Vector3.new(0, 3, 0)) -- lift by 3 studs to avoid floor clipping
+    else
+        warn("HumanoidRootPart not found!")
+    end
+end
 
-TeleportsTab:CreateDropdown({
-    Name = "Select Location",
-    Options = {"Spawn","SpawnLocation","CraftingBench","Scrapper"},
-    CurrentOption = "Spawn",
-    Callback = function(opt) chosenTP = opt end
+-- Add Button for Camp teleport
+TeleportsTab:CreateButton({
+    Name = "Teleport to Camp",
+    Callback = function()
+        teleportTo(CampLocation)
+        Rayfield:Notify({
+            Title = "Teleport",
+            Content = "Teleported to Camp",
+            Duration = 3,
+            Image = 4483362458,
+        })
+    end,
 })
 
-TeleportsTab:CreateButton({
-    Name = "Teleport Now",
-    Callback = function()
-        local hrp = getHRP()
-        if not hrp then return end
-        local resolver = tpLocations[chosenTP]
-        local cf = resolver and resolver()
-        if cf then
-            hrp.CFrame = cf
-            notify("Teleport", "Teleported to "..chosenTP, 3)
-        else
-            notify("Teleport", "Location not found in Workspace.", 4)
-        end
-    end
+-- Optional notification on load
+Rayfield:Notify({
+    Title = "Teleport Ready",
+    Content = "Click 'Teleport to Camp' in the Quick Teleports tab",
+    Duration = 6.5,
+    Image = 4483362458,
 })
 
 
@@ -895,70 +891,197 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+NightsTab:CreateSection("Tree Aura (Advanced)")
+
+-- Tree Aura Config
+local TreeAuraEnabled = false
+local chopRange = 30
+local chopCooldown = 0.5
+local lastChopTimes = {}
+local AutoCollect = false
+
+local targetFolderName = "LandMarks"
+local targetModelName = "Small Tree"
+local weaponName = "Old Axe"
+
+-- Helper: Find Old Axe
+local function findAxe()
+    local inv = LocalPlayer:FindFirstChild("Inventory")
+    if not inv then return nil end
+    return inv:FindFirstChild(weaponName)
+end
+
+-- Check if tree is valid and in range
+local function isTreeValid(tree, hrp)
+    if not tree or not tree.PrimaryPart then return false end
+    if tree.Name ~= targetModelName then return false end
+    local dist = (tree.PrimaryPart.Position - hrp.Position).Magnitude
+    return dist <= chopRange
+end
+
+-- Slider for chop range
+NightsTab:CreateSlider({
+    Name = "Chop Range",
+    Range = {5, 100},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = chopRange,
+    Callback = function(v) chopRange = v end
+})
+
+-- Slider for chop cooldown
+NightsTab:CreateSlider({
+    Name = "Chop Cooldown",
+    Range = {0.1, 2},
+    Increment = 0.05,
+    Suffix = " sec",
+    CurrentValue = chopCooldown,
+    Callback = function(v) chopCooldown = v end
+})
+
+-- Auto Collect Toggle
 NightsTab:CreateToggle({
-    Name = "Tree Aura (Auto Chop)",
+    Name = "Auto Collect Logs",
+    CurrentValue = AutoCollect,
+    Callback = function(v) AutoCollect = v end
+})
+
+-- Tree Aura Toggle
+NightsTab:CreateToggle({
+    Name = "Tree Aura (Small Tree)",
     CurrentValue = false,
     Callback = function(enabled)
         TreeAuraEnabled = enabled
-        if TreeAuraEnabled then
-            print("[Tree Aura] Enabled")
+        if enabled then
+            notify("Tree Aura", "Enabled", 3)
+            local RemoteToolDamage = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("ToolDamageObject")
             task.spawn(function()
                 while TreeAuraEnabled do
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    if not hrp then
-                        task.wait(0.5)
-                        continue
-                    end
+                    local hrp = getHRP()
+                    if not hrp then task.wait(0.5) continue end
 
-                    local axe = findBestAxe()
-                    if not axe then
-                        warn("[Tree Aura] No axe found in inventory!")
+                    local axe = findAxe()
+                    if not axe or not RemoteToolDamage then
                         task.wait(1)
                         continue
                     end
 
-                    local foliageFolder = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Foliage")
-                    if not foliageFolder then
-                        task.wait(1)
-                        continue
-                    end
+                    local landmarksFolder = Workspace:FindFirstChild(targetFolderName)
+                    if not landmarksFolder then task.wait(1) continue end
 
-                    for _, tree in pairs(foliageFolder:GetChildren()) do
+                    for _, tree in ipairs(landmarksFolder:GetChildren()) do
                         if isTreeValid(tree, hrp) then
                             local now = tick()
                             if not lastChopTimes[tree] or (now - lastChopTimes[tree]) >= chopCooldown then
-                                local args = {
-                                    tree,
-                                    axe,
-                                    "4_2356085033", -- ✅ This is usually the tree hit code
-                                    tree.PrimaryPart.CFrame,
-                                }
-                                local success, err = pcall(function()
-                                    RemoteToolDamage:InvokeServer(unpack(args))
-                                end)
-                                if success then
-                                    lastChopTimes[tree] = now
-                                else
-                                    warn("[Tree Aura] Chop failed:", err)
+                                local args = {tree, axe, "4_2356085033", tree.PrimaryPart.CFrame}
+                                pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
+                                lastChopTimes[tree] = now
+
+                                -- Auto Collect Logs
+                                if AutoCollect then
+                                    task.spawn(function()
+                                        local log = Workspace:FindFirstChild("Log")
+                                        if log then
+                                            local logPrim = log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart")
+                                            if logPrim then
+                                                log:SetPrimaryPartCFrame(hrp.CFrame + Vector3.new(0,3,-3))
+                                            end
+                                        end
+                                    end)
                                 end
-                                task.wait(0.1)
+                                task.wait(0.05)
                             end
                         end
                     end
 
-                    task.wait(0.1)
+                    task.wait(0.05)
                 end
             end)
         else
-            print("[Tree Aura] Disabled")
+            notify("Tree Aura", "Disabled", 3)
             lastChopTimes = {}
         end
-    end,
+    end
 })
 
 
 
+-- Create NightsTab
+local NightsTab = Window:CreateTab("NightsTab", 4483362458)
+
+-- Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+-- RemoteEvent for opening chests
+local RequestOpenItemChest = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestOpenItemChest")
+
+-- Chest model names we care about
+local chestNames = {
+    ["Item Chest"] = true,
+    ["Item Chest2"] = true,
+    ["Alien Chest"] = true,
+    ["Item Chest3"] = true,
+    ["Item Chest4"] = true,
+    ["Item Chest5"] = true,
+    ["Item Chest6"] = true
+}
+
+-- Function to hook a ProximityPrompt
+local function hookPrompt(prompt, chestModel)
+    if prompt:IsA("ProximityPrompt") and prompt.ObjectText == "Open Chest" then
+        prompt.HoldDuration = 0 -- Make it instant
+        prompt.Triggered:Connect(function()
+            if chestModel and chestModel:FindFirstChild("Main") then
+                chestModel.PrimaryPart = chestModel.Main
+                RequestOpenItemChest:FireServer(chestModel)
+            end
+        end)
+    end
+end
+
+-- Hook all chests
+local function hookAllChests()
+    local modelsFolder = Workspace:FindFirstChild("Items") and Workspace.Items:FindFirstChild("Models")
+    if not modelsFolder then
+        warn("Models folder not found in Workspace.Items")
+        return
+    end
+
+    -- Hook existing
+    for _, model in ipairs(modelsFolder:GetChildren()) do
+        if chestNames[model.Name] and model:FindFirstChild("ItemChest") then
+            local prompt = model.ItemChest:FindFirstChildOfClass("ProximityPrompt")
+            if prompt then
+                hookPrompt(prompt, model)
+            end
+        end
+    end
+
+    -- Hook future chests
+    modelsFolder.ChildAdded:Connect(function(model)
+        if chestNames[model.Name] and model:FindFirstChild("ItemChest") then
+            local prompt = model.ItemChest:FindFirstChildOfClass("ProximityPrompt")
+            if prompt then
+                hookPrompt(prompt, model)
+            end
+        end
+    end)
+end
+
+-- Button to enable instant open
+NightsTab:CreateButton({
+    Name = "Enable Instant Chest Open",
+    Callback = function()
+        hookAllChests()
+        Rayfield:Notify({
+            Title = "Instant Open Enabled",
+            Content = "All chests now open instantly when you interact.",
+            Duration = 4,
+            Image = 4483362458,
+        })
+    end,
+})
 
 
 -- Done
