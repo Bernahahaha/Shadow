@@ -48,14 +48,16 @@ local function getHRP()
 end
 
 --// Tabs
-local DiscordTab   = Window:CreateTab("📢 Discord", 4483362458)
-local MainTab      = Window:CreateTab("⚡ Main", 6035047409)
-local ESPTab       = Window:CreateTab("👁️ ESP", 6034287525)
-local BringTab     = Window:CreateTab("📦 Bring", 6035190846)
-local VisualTab    = Window:CreateTab("🎨 Visual", 6034996695)
-local TeleportsTab = Window:CreateTab("🗺️ Teleports", 6035190846)
-local AutoTab      = Window:CreateTab("🤖 Auto", 6035190846)
-local NightsTab    = Window:CreateTab("🌙 Nights", 6035190846)
+--// Tabs with Colorful Emojis
+local DiscordTab   = Window:CreateTab("📢💬 Discord", 4483362458)       -- Announcements / Chat
+local MainTab      = Window:CreateTab("⚡🔥 Main", 6035047409)          -- Core features
+local ESPTab       = Window:CreateTab("👁️✨ ESP", 6034287525)          -- Visual enhancements
+local BringTab     = Window:CreateTab("📦🚀 Bring", 6035190846)         -- Item bringing
+local VisualTab    = Window:CreateTab("🎨🌈 Visual", 6034996695)        -- Cosmetic / visual mods
+local TeleportsTab = Window:CreateTab("🗺️📍 Teleports", 6035190846)     -- Location teleporting
+local AutoTab      = Window:CreateTab("🤖⚙️ Auto", 6035190846)          -- Automation
+local NightsTab    = Window:CreateTab("🌙🌌 Nights", 6035190846)         -- Night mode / night-related features
+
 
 ----------------------------------------------------------------
 -- DISCORD
