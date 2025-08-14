@@ -6,12 +6,12 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 local Window = Fluent:CreateWindow({
     Title = "Fluent " .. Fluent.Version,
     SubTitle = "by dawid",
-    TabWidth = 140, -- smaller width for mobile
-    Size = UDim2.fromOffset(350, 500), -- mobile-friendly size
-    Acrylic = true,
+    TabWidth = 140,                  -- medium width for tabs
+    Size = UDim2.fromOffset(480, 440), -- medium overall window size
+    Acrylic = true,                  -- keeps blur effect
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
-})
+}}
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "" }),
