@@ -14,242 +14,41 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+-- ================= Tabs Setup =================
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Exploits = Window:AddTab({ Title = "Exploits", Icon = "zap" }),
+    Automation = Window:AddTab({ Title = "Automation", Icon = "repeat" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "navigation" }),
     Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    ["Local Player"] = Window:AddTab({ Title = "Local Player", Icon = "user" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings-2" }),
+    GUI = Window:AddTab({ Title = "GUI", Icon = "maximize" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-
-local LocalPlayer = Players.LocalPlayer
-
-local function notify(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration or 2})
-    end)
-end
-
--- ================= Main Tab =================
-do
-    Tabs.Main:AddParagraph({
-        Title = "Welcome to ShadowCore!",
-        Content = "A premium, modern exploit GUI for Roblox.\nAll features included."
-    })
-
-    Tabs.Main:AddButton({
-        Title = "Join Discord",
-        Description = "Copy our Discord link",
-        Callback = function()
-            setclipboard("https://discord.gg/shadowcore")
-            Fluent:Notify({ Title = "Discord", Content = "Link copied to clipboard!", Duration = 3 })
-        end
-    })
-
-    Tabs.Main:AddButton({
-        Title = "Unload GUI",
-        Description = "Close the menu safely.",
-        Callback = function()
-            Window:Close()
-        end
-    })
-end
-
--- ================= Exploits Tab =================
--- Auto Eat
-local autoEatEnabled = false
-local autoEatRange = 300
-local autoEatConn
-local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
-local AllFoods = {"Morsel","Steak","Berry","Cooked Morsel","Cooked Steak","Cake","Carrot"}
-local SelectedFoods = AllFoods
-
-local function checkAndConsume()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and table.find(SelectedFoods, obj.Name) then
-            local primaryPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
-            if primaryPart and (primaryPart.Position - hrp.Position).Magnitude <= autoEatRange then
-                pcall(function()
-                    requestConsume:InvokeServer(obj)
-                end)
-            end
-        end
-    end
-end
-
-Tabs.Exploits:AddDropdown({
-    Title = "Select Foods",
-    Description = "Choose which foods to auto-consume",
-    Options = AllFoods,
-    MultiSelect = true,
-    Default = AllFoods,
-    Callback = function(selected)
-        SelectedFoods = selected
-        Fluent:Notify({Title = "Auto Eat", Content = "Selected foods updated", Duration = 3})
-    end
-})
-
-Tabs.Exploits:AddToggle({
-    Title = "Auto Eat Food",
-    Default = false,
-    Callback = function(enabled)
-        autoEatEnabled = enabled
-        if enabled then
-            Fluent:Notify({Title = "Auto Eat", Content = "Enabled", Duration = 3})
-            autoEatConn = RunService.Heartbeat:Connect(checkAndConsume)
-        else
-            Fluent:Notify({Title = "Auto Eat", Content = "Disabled", Duration = 3})
-            if autoEatConn then autoEatConn:Disconnect() end
-        end
-    end
-})
-
--- NoClip
-local noclipEnabled = false
-local noclipConn
-Tabs.Exploits:AddToggle({
-    Title = "NoClip",
-    Default = false,
-    Callback = function(enabled)
-        noclipEnabled = enabled
-        if enabled then
-            noclipConn = RunService.Stepped:Connect(function()
-                local char = LocalPlayer.Character
-                if char then
-                    for _, part in ipairs(char:GetChildren()) do
-                        if part:IsA("BasePart") then part.CanCollide = false end
-                    end
-                end
-            end)
-        else
-            if noclipConn then noclipConn:Disconnect() end
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
-            end
-        end
-    end
-})
-
--- Kill Aura
-local KillAuraEnabled = false
-local attackRange = 30
-local attackCooldown = 0.5
-local lastAttackTimes = {}
-local useWhitelist = true
-local attackAllAtOnce = false
-local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword"}
-local allTargets = {"Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite","Arctic Fox","Black Robe Cultists","Red Robe Cultists"}
-local targetWhitelist = {}
-for _, n in ipairs(allTargets) do targetWhitelist[n] = true end
-
-local function findBestWeapon()
-    local inv = LocalPlayer:FindFirstChild("Inventory")
-    if not inv then return nil end
-    for _, w in ipairs(weaponPriority) do
-        local f = inv:FindFirstChild(w)
-        if f then return f end
-    end
-    return nil
-end
-
-local function isTargetValid(target, hrp)
-    if not target or not target.PrimaryPart then return false end
-    if useWhitelist and not targetWhitelist[target.Name] then return false end
-    return (target.PrimaryPart.Position - hrp.Position).Magnitude <= attackRange
-end
-
-Tabs.Exploits:AddToggle({
-    Title = "Kill Aura",
-    Default = false,
-    Callback = function(enabled)
-        KillAuraEnabled = enabled
-        if enabled then
-            local RemoteToolDamage = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("ToolDamageObject")
-            task.spawn(function()
-                while KillAuraEnabled do
-                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp and RemoteToolDamage then
-                        local weapon = findBestWeapon()
-                        if weapon then
-                            local ownerId = weapon:GetAttribute("Owner") or ""
-                            local charactersFolder = Workspace:FindFirstChild("Characters")
-                            if charactersFolder then
-                                if attackAllAtOnce then
-                                    for _, tgt in ipairs(charactersFolder:GetChildren()) do
-                                        if isTargetValid(tgt, hrp) then
-                                            pcall(function() RemoteToolDamage:InvokeServer(tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame) end)
-                                        end
-                                    end
-                                    task.wait(attackCooldown)
-                                else
-                                    for _, tgt in ipairs(charactersFolder:GetChildren()) do
-                                        if isTargetValid(tgt, hrp) then
-                                            local now = tick()
-                                            if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
-                                                pcall(function() RemoteToolDamage:InvokeServer(tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame) end)
-                                                lastAttackTimes[tgt] = now
-                                                task.wait(0.05)
-                                            end
-                                        end
-                                    end
-                                    task.wait(0.05)
-                                end
-                            end
-                        end
-                    end
-                    task.wait(0.05)
-                end
-            end)
-        else
-            lastAttackTimes = {}
-        end
-    end
-})
-
--- ================= Teleport Tab =================
-local locations = {
-    ["Spawn"] = CFrame.new(0,5,0),
-    ["Camp"] = CFrame.new(12,4,10)
-}
-
-Tabs.Teleport:AddDropdown({
-    Title = "Select Location",
-    Options = {"Spawn","Camp"},
-    Default = "Spawn",
-    Callback = function(selected)
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = locations[selected]
-            Fluent:Notify({Title="Teleport", Content="Teleported to "..selected.."!", Duration=2})
-        end
-    end
-})
-
--- ================= Visuals Tab =================
-Tabs.Visuals:AddToggle({Title="Player ESP", Default=false, Callback=function(state) notify("ESP", "Player ESP "..(state and "Enabled" or "Disabled"), 2) end})
-Tabs.Visuals:AddToggle({Title="World ESP", Default=false, Callback=function(state) notify("ESP", "World ESP "..(state and "Enabled" or "Disabled"), 2) end})
-
--- ================= Settings Tab (Save / Interface) =================
+-- ================= Save & Interface Setup =================
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
+
+-- Ignore theme settings in configs
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
+
+-- Folders for configs
 InterfaceManager:SetFolder("ShadowCore")
 SaveManager:SetFolder("ShadowCore/specific-game")
+
+-- Build sections in Settings tab
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
-SaveManager:LoadAutoloadConfig()
 
-Fluent:Notify({Title="ShadowCore", Content="Script loaded successfully!", Duration=5})
+-- ================= Select Default Tab =================
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "ShadowCore",
+    Content = "GUI loaded successfully. Ready to add features!",
+    Duration = 5
+})
+
