@@ -4,7 +4,7 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 -- ======================= GUI Setup =======================
-local guiWidth, guiHeight = 400, 300
+local guiWidth, guiHeight = 580, 460
 
 local Window = Fluent:CreateWindow({
     Title = "ShadowCore " .. Fluent.Version,
@@ -16,152 +16,167 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+local Options = Fluent.Options
+
 -- ======================= Tabs =======================
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Automation = Window:AddTab({ Title = "Automation", Icon = "robot" }),
+    Fun = Window:AddTab({ Title = "Fun", Icon = "smile" }),
+    AutoBandage = Window:AddTab({ Title = "Auto Bandage", Icon = "heart" }),
+    BringStuff = Window:AddTab({ Title = "Bring Stuff", Icon = "hand" }),
+    LocalPlayer = Window:AddTab({ Title = "Local Player", Icon = "user" }),
+    Teleport = Window:AddTab({ Title = "Teleport", Icon = "arrow-up-right" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
-local Options = Fluent.Options
-
 -- ======================= Main Tab Elements =======================
 do
-    -- Notification Example
+    Tabs.Main:AddParagraph({
+        Title = "Welcome",
+        Content = "ShadowCore GUI by Sin.\nUse the tabs to access features!"
+    })
+
+    -- Example Notification
     Fluent:Notify({
         Title = "Notification",
-        Content = "This is a notification",
-        SubContent = "SubContent",
+        Content = "Welcome to ShadowCore!",
         Duration = 5
     })
-
-    -- Paragraph
-    Tabs.Main:AddParagraph({
-        Title = "Paragraph",
-        Content = "This is a paragraph.\nSecond line!"
-    })
-
-    -- Button with Dialog
-    Tabs.Main:AddButton({
-        Title = "Button",
-        Description = "Very important button",
-        Callback = function()
-            Window:Dialog({
-                Title = "Title",
-                Content = "This is a dialog",
-                Buttons = {
-                    { Title = "Confirm", Callback = function() print("Confirmed the dialog.") end },
-                    { Title = "Cancel", Callback = function() print("Cancelled the dialog.") end }
-                }
-            })
-        end
-    })
-
-    -- Toggle
-    local Toggle = Tabs.Main:AddToggle("MyToggle", { Title = "Toggle", Default = false })
-    Toggle:OnChanged(function()
-        print("Toggle changed:", Options.MyToggle.Value)
-    end)
-    Options.MyToggle:SetValue(false)
-
-    -- Slider
-    local Slider = Tabs.Main:AddSlider("Slider", {
-        Title = "Slider",
-        Description = "This is a slider",
-        Default = 2,
-        Min = 0,
-        Max = 5,
-        Rounding = 1,
-        Callback = function(Value) print("Slider was changed:", Value) end
-    })
-    Slider:OnChanged(function(Value) print("Slider changed:", Value) end)
-    Slider:SetValue(3)
-
-    -- Dropdown
-    local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
-        Title = "Dropdown",
-        Values = {"one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen"},
-        Multi = false,
-        Default = 1
-    })
-    Dropdown:SetValue("four")
-    Dropdown:OnChanged(function(Value) print("Dropdown changed:", Value) end)
-
-    -- MultiDropdown
-    local MultiDropdown = Tabs.Main:AddDropdown("MultiDropdown", {
-        Title = "Dropdown",
-        Description = "You can select multiple values.",
-        Values = {"one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen"},
-        Multi = true,
-        Default = {"seven","twelve"}
-    })
-    MultiDropdown:SetValue({ three = true, five = true, seven = false })
-    MultiDropdown:OnChanged(function(Value)
-        local Values = {}
-        for Key, State in next, Value do
-            table.insert(Values, Key)
-        end
-        print("Multidropdown changed:", table.concat(Values, ", "))
-    end)
-
-    -- Colorpicker
-    local Colorpicker = Tabs.Main:AddColorpicker("Colorpicker", { Title = "Colorpicker", Default = Color3.fromRGB(96,205,255) })
-    Colorpicker:OnChanged(function() print("Colorpicker changed:", Colorpicker.Value) end)
-    Colorpicker:SetValueRGB(Color3.fromRGB(0,255,140))
-
-    -- Transparency Colorpicker
-    local TColorpicker = Tabs.Main:AddColorpicker("TransparencyColorpicker", {
-        Title = "Colorpicker",
-        Description = "but you can change the transparency.",
-        Transparency = 0,
-        Default = Color3.fromRGB(96,205,255)
-    })
-    TColorpicker:OnChanged(function()
-        print("TColorpicker changed:", TColorpicker.Value, "Transparency:", TColorpicker.Transparency)
-    end)
-
-    -- Keybind
-    local Keybind = Tabs.Main:AddKeybind("Keybind", {
-        Title = "KeyBind",
-        Mode = "Toggle",
-        Default = "LeftControl",
-        Callback = function(Value) print("Keybind clicked!", Value) end,
-        ChangedCallback = function(New) print("Keybind changed!", New) end
-    })
-    Keybind:OnClick(function() print("Keybind clicked:", Keybind:GetState()) end)
-    Keybind:OnChanged(function() print("Keybind changed:", Keybind.Value) end)
-    task.spawn(function()
-        while true do
-            wait(1)
-            if Keybind:GetState() then print("Keybind is being held down") end
-            if Fluent.Unloaded then break end
-        end
-    end)
-    Keybind:SetValue("MB2", "Toggle")
-
-    -- Input
-    local Input = Tabs.Main:AddInput("Input", {
-        Title = "Input",
-        Default = "Default",
-        Placeholder = "Placeholder",
-        Numeric = false,
-        Finished = false,
-        Callback = function(Value) print("Input changed:", Value) end
-    })
-    Input:OnChanged(function() print("Input updated:", Input.Value) end)
 end
 
--- ======================= Save & Interface Managers =======================
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/specific-game")
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
+-- ======================= Automation Tab Elements =======================
+do
+    Tabs.Automation:AddParagraph({
+        Title = "Automation",
+        Content = "Here you can enable general automation features."
+    })
+end
+
+-- ======================= Fun Tab Elements =======================
+do
+    Tabs.Fun:AddButton({
+        Title = "Fun Button",
+        Description = "Just for fun!",
+        Callback = function()
+            print("Fun feature clicked!")
+            -- Add your fun logic here
+        end
+    })
+end
+
+-- ======================= Auto Bandage Tab =======================
+do
+    local AutoBandage = Tabs.AutoBandage:AddToggle("AutoBandage", {
+        Title = "Auto Bandage",
+        Description = "Automatically heals your player.",
+        Default = false
+    })
+    AutoBandage:OnChanged(function(State)
+        task.spawn(function()
+            while State do
+                task.wait(1)
+                local player = game.Players.LocalPlayer
+                if player.Character and player.Character:FindFirstChild("Humanoid") then
+                    local humanoid = player.Character.Humanoid
+                    if humanoid.Health < humanoid.MaxHealth then
+                        humanoid.Health = humanoid.MaxHealth
+                        print("Healed player!")
+                    end
+                end
+                if not AutoBandage.Value then break end
+            end
+        end)
+    end)
+end
+
+-- ======================= Bring Stuff Tab =======================
+do
+    Tabs.BringStuff:AddButton({
+        Title = "Bring Stuff",
+        Description = "Bring all items to your location",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and obj.Name:match("Item") then
+                    obj.CFrame = root.CFrame + Vector3.new(0,5,0)
+                    print("Brought object:", obj.Name)
+                end
+            end
+        end
+    })
+end
+
+-- ======================= Local Player Tab =======================
+do
+    Tabs.LocalPlayer:AddButton({
+        Title = "Reset Character",
+        Description = "Resets your character",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            if player.Character then
+                player.Character:BreakJoints()
+                print("Character reset!")
+            end
+        end
+    })
+end
+
+-- ======================= Teleport Tab =======================
+do
+    -- Teleport Input
+    Tabs.Teleport:AddInput("TeleportInput", {
+        Title = "Teleport To (x,y,z)",
+        Default = "0,0,0",
+        Placeholder = "Enter coordinates like 0,5,0",
+        Callback = function(Value)
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local x, y, z = Value:match("([^,]+),([^,]+),([^,]+)")
+                x, y, z = tonumber(x), tonumber(y), tonumber(z)
+                if x and y and z then
+                    root.CFrame = CFrame.new(x,y,z)
+                    print("Teleported to:", x, y, z)
+                else
+                    print("Invalid coordinates!")
+                end
+            end
+        end
+    })
+
+    -- Teleport Keybind
+    Tabs.Teleport:AddKeybind("TeleportKey", {
+        Title = "Teleport Key",
+        Mode = "Toggle",
+        Default = "F",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.CFrame = CFrame.new(0,10,0) -- preset location
+                print("Teleported to preset location!")
+            end
+        end
+    })
+end
+
+-- ======================= Settings Tab =======================
+do
+    SaveManager:SetLibrary(Fluent)
+    InterfaceManager:SetLibrary(Fluent)
+    SaveManager:IgnoreThemeSettings()
+    SaveManager:SetIgnoreIndexes({})
+    InterfaceManager:SetFolder("FluentScriptHub")
+    SaveManager:SetFolder("FluentScriptHub/specific-game")
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+    SaveManager:BuildConfigSection(Tabs.Settings)
+end
 
 -- ======================= Initialize GUI =======================
 Window:SelectTab(1)
-
-Fluent:Notify({ Title = "Fluent", Content = "The script has been loaded.", Duration = 8 })
+Fluent:Notify({ Title = "ShadowCore", Content = "The script has been loaded.", Duration = 8 })
 SaveManager:LoadAutoloadConfig()
+
