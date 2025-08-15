@@ -15,6 +15,7 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+-- Tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Exploits = Window:AddTab({ Title = "Exploits", Icon = "zap" }),
@@ -36,10 +37,10 @@ local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Helper notifications
+-- Helper notification
 local function notify(title, text, duration)
     pcall(function()
-        StarterGui:SetCore("SendNotification", {Title=title, Text=text, Duration=duration or 2})
+        StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration or 2})
     end)
 end
 
@@ -72,7 +73,10 @@ end
 -- Auto Eat
 local autoEatEnabled = false
 local autoEatRange = 300
+local autoEatConn
+local noclipEnabled = false
 local noclipConn
+
 local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
 local AllFoods = {"Morsel","Steak","Berry","Cooked Morsel","Cooked Steak","Cake","Carrot"}
 local SelectedFoods = AllFoods
@@ -113,20 +117,19 @@ Tabs.Exploits:AddButton({
         autoEatEnabled = not autoEatEnabled
         if autoEatEnabled then
             Fluent:Notify({Title = "Auto Eat", Content = "Enabled", Duration = 3})
-            noclipConn = RunService.Heartbeat:Connect(function()
+            autoEatConn = RunService.Heartbeat:Connect(function()
                 if autoEatEnabled then
                     checkAndConsume()
                 end
             end)
         else
             Fluent:Notify({Title = "Auto Eat", Content = "Disabled", Duration = 3})
-            if noclipConn then noclipConn:Disconnect() end
+            if autoEatConn then autoEatConn:Disconnect() end
         end
     end
 })
 
 -- NoClip Button
-local noclipEnabled = false
 Tabs.Exploits:AddButton({
     Title = "Toggle NoClip",
     Description = "Enable/Disable NoClip",
@@ -136,9 +139,10 @@ Tabs.Exploits:AddButton({
             Fluent:Notify({Title="NoClip", Content="Enabled", Duration=3})
             noclipConn = RunService.Stepped:Connect(function()
                 local char = LocalPlayer.Character
-                if not char then return end
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
+                if char then
+                    for _, part in ipairs(char:GetChildren()) do
+                        if part:IsA("BasePart") then part.CanCollide = false end
+                    end
                 end
             end)
         else
@@ -154,7 +158,7 @@ Tabs.Exploits:AddButton({
     end
 })
 
--- Kill Aura
+-- Kill Aura (Advanced)
 local KillAuraEnabled = false
 local attackRange = 30
 local attackCooldown = 0.5
@@ -187,97 +191,60 @@ local function isTargetValid(target, hrp)
     return dist <= attackRange
 end
 
-Tabs.Exploits:AddSlider("AttackRange", {
-    Title = "Attack Range",
-    Min = 5,
-    Max = 100,
-    Default = attackRange,
-    Rounding = 0,
-    Suffix = " studs",
-    Callback = function(v) attackRange = v end
-})
-
-Tabs.Exploits:AddSlider("AttackCooldown", {
-    Title = "Attack Cooldown",
-    Min = 0.1,
-    Max = 2,
-    Default = attackCooldown,
-    Rounding = 2,
-    Suffix = " sec",
-    Callback = function(v) attackCooldown = v end
-})
-
-Tabs.Exploits:AddToggle("UseTargetWhitelist", {
-    Title = "Use Target Whitelist",
-    Default = useWhitelist,
-    Callback = function(v) useWhitelist = v end
-})
-
-Tabs.Exploits:AddToggle("AttackAllAtOnce", {
-    Title = "Attack All Targets At Once",
-    Default = attackAllAtOnce,
-    Callback = function(v) attackAllAtOnce = v end
-})
-
-Tabs.Exploits:AddDropdown("WeaponPriority", {
-    Title = "Weapon Priority",
-    Values = weaponPriority,
-    Default = weaponPriority[1],
-    Multi = false,
-    Callback = function(val)
-        notify("Kill Aura", "Priority weapon set to: "..tostring(val), 3)
-    end
-})
+Tabs.Exploits:AddSlider("AttackRange", {Title="Attack Range", Min=5, Max=100, Default=attackRange, Rounding=0, Suffix=" studs", Callback=function(v) attackRange=v end})
+Tabs.Exploits:AddSlider("AttackCooldown", {Title="Attack Cooldown", Min=0.1, Max=2, Default=attackCooldown, Rounding=2, Suffix=" sec", Callback=function(v) attackCooldown=v end})
+Tabs.Exploits:AddToggle("UseTargetWhitelist", {Title="Use Target Whitelist", Default=useWhitelist, Callback=function(v) useWhitelist=v end})
+Tabs.Exploits:AddToggle("AttackAllAtOnce", {Title="Attack All Targets At Once", Default=attackAllAtOnce, Callback=function(v) attackAllAtOnce=v end})
+Tabs.Exploits:AddDropdown("WeaponPriority", {Title="Weapon Priority", Values=weaponPriority, Default=weaponPriority[1], Multi=false, Callback=function(val) notify("Kill Aura", "Priority weapon set to: "..tostring(val),3) end})
 
 Tabs.Exploits:AddToggle("KillAuraAdvanced", {
-    Title = "Kill Aura (Advanced)",
-    Default = false,
-    Callback = function(enabled)
+    Title="Kill Aura (Advanced)",
+    Default=false,
+    Callback=function(enabled)
         KillAuraEnabled = enabled
         if enabled then
-            notify("Kill Aura", "Enabled", 3)
+            notify("Kill Aura","Enabled",3)
             local RemoteToolDamage = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("ToolDamageObject")
             task.spawn(function()
                 while KillAuraEnabled do
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if not hrp then task.wait(0.5) continue end
-                    local weapon = findBestWeapon()
-                    if not weapon or not RemoteToolDamage then task.wait(1) continue end
-                    local ownerId = weapon:GetAttribute("Owner") or ""
-                    local charactersFolder = Workspace:FindFirstChild("Characters")
-                    if not charactersFolder then task.wait(0.5) continue end
-
-                    if attackAllAtOnce then
-                        local hits = 0
-                        for _, tgt in ipairs(charactersFolder:GetChildren()) do
-                            if isTargetValid(tgt, hrp) then
-                                local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
-                                pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
-                                hits += 1
-                            end
-                        end
-                        if hits > 0 then
-                            notify("Kill Aura", ("Attacked %d targets."):format(hits), 2)
-                        end
-                        task.wait(attackCooldown)
-                    else
-                        for _, tgt in ipairs(charactersFolder:GetChildren()) do
-                            if isTargetValid(tgt, hrp) then
-                                local now = tick()
-                                if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
-                                    local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
-                                    pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
-                                    lastAttackTimes[tgt] = now
+                    if hrp and RemoteToolDamage then
+                        local weapon = findBestWeapon()
+                        if weapon then
+                            local ownerId = weapon:GetAttribute("Owner") or ""
+                            local charactersFolder = Workspace:FindFirstChild("Characters")
+                            if charactersFolder then
+                                if attackAllAtOnce then
+                                    local hits = 0
+                                    for _, tgt in ipairs(charactersFolder:GetChildren()) do
+                                        if isTargetValid(tgt, hrp) then
+                                            pcall(function() RemoteToolDamage:InvokeServer(tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame) end)
+                                            hits += 1
+                                        end
+                                    end
+                                    if hits>0 then notify("Kill Aura", ("Attacked %d targets."):format(hits),2) end
+                                    task.wait(attackCooldown)
+                                else
+                                    for _, tgt in ipairs(charactersFolder:GetChildren()) do
+                                        if isTargetValid(tgt, hrp) then
+                                            local now = tick()
+                                            if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
+                                                pcall(function() RemoteToolDamage:InvokeServer(tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame) end)
+                                                lastAttackTimes[tgt] = now
+                                                task.wait(0.05)
+                                            end
+                                        end
+                                    end
                                     task.wait(0.05)
                                 end
                             end
                         end
-                        task.wait(0.05)
                     end
+                    task.wait(0.05)
                 end
             end)
         else
-            notify("Kill Aura", "Disabled", 3)
+            notify("Kill Aura","Disabled",3)
             lastAttackTimes = {}
         end
     end
@@ -288,7 +255,7 @@ local teleportTab = Tabs.Teleport
 teleportTab:AddSection("Teleportation")
 local locations = {
     ["Spawn"] = CFrame.new(0,5,0),
-    ["Camp"] = CFrame.new(12,4,10),
+    ["Camp"] = CFrame.new(12,4,10)
 }
 
 teleportTab:AddDropdown({
@@ -311,22 +278,8 @@ teleportTab:AddDropdown({
 -- ================= Visuals Tab =================
 local visualsTab = Tabs.Visuals
 visualsTab:AddSection("ESP Settings")
-
-visualsTab:AddToggle({
-    Title = "Enable Player ESP",
-    Default = false,
-    Callback = function(state)
-        notify("ESP","Player ESP "..(state and "Enabled" or "Disabled"),2)
-    end
-})
-
-visualsTab:AddToggle({
-    Title = "Enable World ESP",
-    Default = false,
-    Callback = function(state)
-        notify("ESP","World ESP "..(state and "Enabled" or "Disabled"),2)
-    end
-})
+visualsTab:AddToggle({Title="Enable Player ESP", Default=false, Callback=function(state) notify("ESP","Player ESP "..(state and "Enabled" or "Disabled"),2) end})
+visualsTab:AddToggle({Title="Enable World ESP", Default=false, Callback=function(state) notify("ESP","World ESP "..(state and "Enabled" or "Disabled"),2) end})
 
 -- Addons: SaveManager & InterfaceManager
 SaveManager:SetLibrary(Fluent)
