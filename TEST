@@ -341,38 +341,7 @@ do
 end
 
 -- Teleport Tab: Movement & Locations
-do
-local tab = Tabs.Teleport
-tab:AddSection("Teleportation")
-tab:AddButton({
-    Title = "Camp",
-    Callback = function()
-        local char = game.Players.LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(12, 4, 10)
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to Camp!", Duration = 2 })
-        end
-    end
-})
-    tab:AddDropdown("PlayersList", {
-        Title = "Teleport to Player",
-        Values = (function()
-            local t = {}
-            for _,v in ipairs(game.Players:GetPlayers()) do table.insert(t, v.Name) end
-            return t
-        end)(),
-        Default = 1,
-        Callback = function(name)
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to " .. tostring(name), Duration = 2 })
-        end
-    })
-    tab:AddButton({
-        Title = "Random Teleport",
-        Callback = function()
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to a random location!", Duration = 2 })
-        end
-    })
-end
+
 
 -- Visuals Tab: ESP and World
 
