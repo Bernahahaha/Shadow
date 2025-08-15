@@ -54,7 +54,6 @@ do
 end
 
 -- Exploits Tab: Powerful features
-do
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
