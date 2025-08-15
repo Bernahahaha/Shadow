@@ -54,107 +54,27 @@ do
 end
 
 -- Exploits Tab: Powerful features
-local tab = Tabs.Exploits
-tab:AddSection("Player Exploits")
-
--- Helper function for notifications
-local function notify(title, enabledText, disabledText, state)
-    Fluent:Notify({
-        Title = title,
-        Content = state and enabledText or disabledText,
-        Duration = 2
-    })
-end
-
--- God Mode Toggle
-tab:AddToggle("GodMode", {
-    Title = "God Mode",
-    Default = false
-}):OnChanged(function(state)
-    notify("God Mode", "God Mode Enabled!", "God Mode Disabled!", state)
-    -- Insert actual GodMode logic here
-end)
-
-local tab = Tabs.Exploits
-tab:AddSection("Player Exploits")
-
--- Helper function for notifications
-local function notify(title, enabledText, disabledText, state)
-    Fluent:Notify({
-        Title = title,
-        Content = state and enabledText or disabledText,
-        Duration = 2
-    })
-end
-
--- NoClip Toggle with actual functionality
-local noclipEnabled, noclipConn
-tab:AddToggle("NoClip", {
-    Title = "NoClip",
-    Default = false
-}):OnChanged(function(state)
-    noclipEnabled = state
-    notify("NoClip", "NoClip On (walk through walls)", "NoClip Off", state)
-
-    if state then
-        -- Enable NoClip
-        noclipConn = RunService.Stepped:Connect(function()
-            local char = LocalPlayer.Character
-            if not char then return end
-            for _, part in ipairs(char:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end)
-    else
-        -- Disable NoClip
-        if noclipConn then
-            noclipConn:Disconnect()
-            noclipConn = nil
+do
+    local tab = Tabs.Exploits
+    tab:AddSection("Player Exploits")
+    tab:AddToggle("GodMode", { Title = "God Mode", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "God Mode", Content = v and "God Mode Enabled!" or "God Mode Disabled!", Duration = 2 })
+    end)
+    tab:AddToggle("NoClip", { Title = "NoClip", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "NoClip", Content = v and "NoClip On (walk through walls)" or "NoClip Off", Duration = 2 })
+    end)
+    tab:AddToggle("Fly", { Title = "Fly", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "Fly", Content = v and "Fly Enabled!" or "Fly Disabled!", Duration = 2 })
+    end)
+    tab:AddToggle("InfiniteJump", { Title = "Infinite Jump", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "Infinite Jump", Content = v and "Infinite Jump ON!" or "Infinite Jump OFF!", Duration = 2 })
+    end)
+    tab:AddButton({
+        Title = "Destroy All Doors",
+        Callback = function()
+            Fluent:Notify({ Title = "Exploit", Content = "All doors destroyed (example)!", Duration = 2 })
         end
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
-    end
-end)
-
--- Fly Toggle
-tab:AddToggle("Fly", {
-    Title = "Fly",
-    Default = false
-}):OnChanged(function(state)
-    notify("Fly", "Fly Enabled!", "Fly Disabled!", state)
-    -- Insert Fly logic here
-end)
-
--- Infinite Jump Toggle
-tab:AddToggle("InfiniteJump", {
-    Title = "Infinite Jump",
-    Default = false
-}):OnChanged(function(state)
-    notify("Infinite Jump", "Infinite Jump ON!", "Infinite Jump OFF!", state)
-    -- Insert Infinite Jump logic here
-end)
-
--- Destroy All Doors Button
-tab:AddButton({
-    Title = "Destroy All Doors",
-    Callback = function()
-        -- Insert your door-destroying logic here
-        Fluent:Notify({
-            Title = "Exploit",
-            Content = "All doors destroyed (example)!",
-            Duration = 2
-        })
-    end
-})
-
+    })
 end
 
 local Players = game:GetService("Players")
@@ -543,40 +463,138 @@ Tabs.Visuals:AddToggle("ESPPlayers", {
     end
 })
 
-Tabs.Visuals:AddSection("ESP - Items (simple highlight)")
-local ESPItems = false
-Tabs.Visuals:AddToggle("ESPItems", {
-    Title = "ESP Items (Tools/Models with Handle)",
+Tabs.Visuals:AddSection("ESP GEARS")
+local ItemESPEnabled = false
+local AutoTPEnabled = false
+local AutoTPDistance = 10
+local SelectedItems = {}
+local ESPObjects = {}
+
+local allItems = {
+     "Log","Scraps","Bolt","Sheet Metal","UFO","Junk",
+    "Broken Fan","Broken Radio","UFO Component","Tyre",
+    "Broken Microwave","Metal Chair","Old Car Engine",
+    "Cultist Experiment","Washing Machine","Cultist Prototype",
+    "UFO Scrap","Fuel","Coal","Water","Food","Morsel","Steak","Bandage","MedKit","Berry",
+}
+
+for _, itemName in ipairs(allItems) do
+    SelectedItems[itemName] = false
+Tabs.Visuals:AddToggle("ESP: ", {
+        Name = "ESP: "..itemName,
+        CurrentValue = false,
+        Callback = function(state)
+            SelectedItems[itemName] = state
+            -- cleanup existing objects for this name
+            for inst, data in pairs(ESPObjects) do
+                if inst.Name == itemName and data.Billboard then
+                    data.Billboard:Destroy()
+                    ESPObjects[inst] = nil
+                endTabs.Visuals:AddSection("ESP - Players")
+            end
+        end
+    })
+end
+
+Tabs.Visuals:AddToggle("AUTO TP DISTANCE", {
+    Name = "Auto TP Distance",
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = AutoTPDistance,
+    Callback = function(v) AutoTPDistance = v end
+})
+
+Tabs.Visuals:AddToggle("Auto Teleport to Closest Selected Item", {
+    Name = "Auto Teleport to Closest Selected Item",
+    CurrentValue = false,
+    Callback = function(state) AutoTPEnabled = state end
+})
+
+local function createItemBillboard(item)
+    local base = item.PrimaryPart or item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
+    if not base then return end
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "SC_ItemESP"
+    bb.Adornee = base
+    bb.Size = UDim2.new(0,120,0,36)
+    bb.StudsOffset = Vector3.new(0,2,0)
+    bb.AlwaysOnTop = true
+    bb.Parent = base
+
+    local nameL = Instance.new("TextLabel")
+    nameL.BackgroundTransparency = 1
+    nameL.Size = UDim2.new(1,0,0.6,0)
+    nameL.Font = Enum.Font.GothamBold
+    nameL.TextColor3 = Color3.fromRGB(255,255,255)
+    nameL.TextScaled = true
+    nameL.Text = item.Name
+    nameL.Parent = bb
+
+    local distL = Instance.new("TextLabel")
+    distL.BackgroundTransparency = 1
+    distL.Position = UDim2.new(0,0,0.6,0)
+    distL.Size = UDim2.new(1,0,0.4,0)
+    distL.Font = Enum.Font.Gotham
+    distL.TextColor3 = Color3.fromRGB(255,255,255)
+    distL.TextScaled = true
+    distL.Text = "Distance: 0"
+    distL.Parent = bb
+
+    ESPObjects[item] = {Billboard = bb, DistLabel = distL}
+end
+
+Tabs.Visuals:AddToggle("ON ESP", {
+    Title = "ON ESP",
     Default = false,
     Callback = function(state)
-        ESPItems = state
-        if state then
-            task.spawn(function()
-                while ESPItems do
-                    for _, d in ipairs(Workspace:GetDescendants()) do
-                        local isItem = d:IsA("Tool") or (d:IsA("Model") and d:FindFirstChild("Handle"))
-                        if isItem and not d:FindFirstChild("SC_ESP_Item") then
-                            local hl = Instance.new("Highlight")
-                            hl.Name = "SC_ESP_Item"
-                            hl.Adornee = d
-                            hl.FillColor = Color3.fromRGB(0,255,0)
-                            hl.OutlineColor = Color3.fromRGB(255,255,255)
-                            hl.Parent = d
-                        end
-                    end
-                    task.wait(1.5)
-                end
-            end)
-        else
-            for _, d in ipairs(Workspace:GetDescendants()) do
-                local hl = d:FindFirstChild("SC_ESP_Item")
-                if hl then hl:Destroy() end
+        ItemESPEnabled = state
+        if not state then
+            for _, data in pairs(ESPObjects) do
+                if data.Billboard then data.Billboard:Destroy() end
             end
+            ESPObjects = {}
         end
     end
 })
 
+RunService.RenderStepped:Connect(function()
+    if not ItemESPEnabled then return end
+    local hrp = getHRP()
+    if not hrp then return end
 
+    local closest, closestDist = nil, math.huge
+    for _, d in ipairs(Workspace:GetDescendants()) do
+        if SelectedItems[d.Name] then
+            local base = d.PrimaryPart or d:FindFirstChild("Handle") or d:FindFirstChildWhichIsA("BasePart")
+            if base then
+                if not ESPObjects[d] or not ESPObjects[d].Billboard or not ESPObjects[d].Billboard.Parent then
+                    createItemBillboard(d)
+                end
+                local dist = (base.Position - hrp.Position).Magnitude
+                local info = ESPObjects[d]
+                if info and info.DistLabel then
+                    info.DistLabel.Text = ("Distance: %.1f"):format(dist)
+                    if dist < 20 then
+                        info.DistLabel.TextColor3 = Color3.fromRGB(0,255,0)
+                    elseif dist < 50 then
+                        info.DistLabel.TextColor3 = Color3.fromRGB(255,255,0)
+                    else
+                        info.DistLabel.TextColor3 = Color3.fromRGB(255,100,100)
+                    end
+                end
+                if dist < closestDist then
+                    closestDist = dist
+                    closest = base
+                end
+            end
+        end
+    end
+
+    if AutoTPEnabled and closest and closestDist <= AutoTPDistance then
+        hrp.CFrame = closest.CFrame + Vector3.new(0,3,0)
+    end
+end)
 
 
 
@@ -623,6 +641,138 @@ Tabs.Visuals:AddToggle("NoFog", {
     end
 })
 
+Tabs.Visuals:AddSection("ESP GEARS")
+local ItemESPEnabled = false
+local AutoTPEnabled = false
+local AutoTPDistance = 10
+local SelectedItems = {}
+local ESPObjects = {}
+
+local allItems = {
+     "Log","Scraps","Bolt","Sheet Metal","UFO","Junk",
+    "Broken Fan","Broken Radio","UFO Component","Tyre",
+    "Broken Microwave","Metal Chair","Old Car Engine",
+    "Cultist Experiment","Washing Machine","Cultist Prototype",
+    "UFO Scrap","Fuel","Coal","Water","Food","Morsel","Steak","Bandage","MedKit","Berry",
+}
+
+for _, itemName in ipairs(allItems) do
+    SelectedItems[itemName] = false
+    NightsTab:CreateToggle({
+        Name = "ESP: "..itemName,
+        CurrentValue = false,
+        Callback = function(state)
+            SelectedItems[itemName] = state
+            -- cleanup existing objects for this name
+            for inst, data in pairs(ESPObjects) do
+                if inst.Name == itemName and data.Billboard then
+                    data.Billboard:Destroy()
+                    ESPObjects[inst] = nil
+                endTabs.Visuals:AddSection("ESP - Players")
+            end
+        end
+    })
+end
+
+Tabs.Visuals:AddToggle("AUTO TP DISTANCE", {
+    Name = "Auto TP Distance",
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = AutoTPDistance,
+    Callback = function(v) AutoTPDistance = v end
+})
+
+Tabs.Visuals:AddToggle("ESPPlayers", {
+    Name = "Auto Teleport to Closest Selected Item",
+    CurrentValue = false,
+    Callback = function(state) AutoTPEnabled = state end
+})
+
+local function createItemBillboard(item)
+    local base = item.PrimaryPart or item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
+    if not base then return end
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "SC_ItemESP"
+    bb.Adornee = base
+    bb.Size = UDim2.new(0,120,0,36)
+    bb.StudsOffset = Vector3.new(0,2,0)
+    bb.AlwaysOnTop = true
+    bb.Parent = base
+
+    local nameL = Instance.new("TextLabel")
+    nameL.BackgroundTransparency = 1
+    nameL.Size = UDim2.new(1,0,0.6,0)
+    nameL.Font = Enum.Font.GothamBold
+    nameL.TextColor3 = Color3.fromRGB(255,255,255)
+    nameL.TextScaled = true
+    nameL.Text = item.Name
+    nameL.Parent = bb
+
+    local distL = Instance.new("TextLabel")
+    distL.BackgroundTransparency = 1
+    distL.Position = UDim2.new(0,0,0.6,0)
+    distL.Size = UDim2.new(1,0,0.4,0)
+    distL.Font = Enum.Font.Gotham
+    distL.TextColor3 = Color3.fromRGB(255,255,255)
+    distL.TextScaled = true
+    distL.Text = "Distance: 0"
+    distL.Parent = bb
+
+    ESPObjects[item] = {Billboard = bb, DistLabel = distL}
+end
+
+Tabs.Visuals:AddToggle("ON ESP", {
+    Title = "ON ESP",
+    Default = false,
+    Callback = function(state)
+        ItemESPEnabled = state
+        if not state then
+            for _, data in pairs(ESPObjects) do
+                if data.Billboard then data.Billboard:Destroy() end
+            end
+            ESPObjects = {}
+        end
+    end
+})
+
+RunService.RenderStepped:Connect(function()
+    if not ItemESPEnabled then return end
+    local hrp = getHRP()
+    if not hrp then return end
+
+    local closest, closestDist = nil, math.huge
+    for _, d in ipairs(Workspace:GetDescendants()) do
+        if SelectedItems[d.Name] then
+            local base = d.PrimaryPart or d:FindFirstChild("Handle") or d:FindFirstChildWhichIsA("BasePart")
+            if base then
+                if not ESPObjects[d] or not ESPObjects[d].Billboard or not ESPObjects[d].Billboard.Parent then
+                    createItemBillboard(d)
+                end
+                local dist = (base.Position - hrp.Position).Magnitude
+                local info = ESPObjects[d]
+                if info and info.DistLabel then
+                    info.DistLabel.Text = ("Distance: %.1f"):format(dist)
+                    if dist < 20 then
+                        info.DistLabel.TextColor3 = Color3.fromRGB(0,255,0)
+                    elseif dist < 50 then
+                        info.DistLabel.TextColor3 = Color3.fromRGB(255,255,0)
+                    else
+                        info.DistLabel.TextColor3 = Color3.fromRGB(255,100,100)
+                    end
+                end
+                if dist < closestDist then
+                    closestDist = dist
+                    closest = base
+                end
+            end
+        end
+    end
+
+    if AutoTPEnabled and closest and closestDist <= AutoTPDistance then
+        hrp.CFrame = closest.CFrame + Vector3.new(0,3,0)
+    end
+end)
 
 -- Local Player Tab: Advanced, as per your image reference
 do
