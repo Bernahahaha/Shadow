@@ -1,198 +1,335 @@
--- ======================= Visual Tab =======================
-local camera = workspace.CurrentCamera
-local defaultFOV = camera.FieldOfView
-local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+-- ======================= Load Libraries =======================
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- ESP storage
-local activeESP = {}
-local activeItemESP = {}
+-- ======================= GUI Setup =======================
+local guiWidth, guiHeight = 460, 300
+local Window = Fluent:CreateWindow({
+    Title = "ShadowCore " .. Fluent.Version,
+    SubTitle = "by Sin",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(guiWidth, guiHeight),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+local Options = Fluent.Options
 
--- Function to create a Billboard GUI for ESP
-local function createBillboard(target, text, color)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESP_Billboard"
-    billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.Parent = target
+-- ======================= Tabs =======================
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Automation = Window:AddTab({ Title = "Automation", Icon = "robot" }),
+    Fun = Window:AddTab({ Title = "Fun", Icon = "smile" }),
+    AutoBandage = Window:AddTab({ Title = "Auto Bandage", Icon = "heart" }),
+    BringStuff = Window:AddTab({ Title = "Bring Stuff", Icon = "hand" }),
+    LocalPlayer = Window:AddTab({ Title = "Local Player", Icon = "user" }),
+    Teleport = Window:AddTab({ Title = "Teleport", Icon = "arrow-up-right" }),
+    Visual = Window:AddTab({ Title = "Visual", Icon = "eye" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = color
-    label.TextStrokeTransparency = 0
-    label.Font = Enum.Font.SourceSansBold
-    label.TextScaled = true
-    label.Parent = billboard
-
-    return billboard
-end
-
--- Function to clear ESP
-local function clearESP(storage)
-    for _, v in pairs(storage) do
-        if v and v.Parent then
-            v:Destroy()
-        end
-    end
-    table.clear(storage)
-end
-
--- Visual Tab Content
+-- ======================= Main Tab =======================
 do
-    -- FOV Slider
-    Tabs.Visual:AddSlider("FOVSlider", {
-        Title = "Field of View",
-        Description = "Change your camera FOV",
-        Default = defaultFOV,
-        Min = 40,
-        Max = 120,
-        Rounding = 0,
-        Callback = function(Value)
-            camera.FieldOfView = Value
-        end
+    Tabs.Main:AddParagraph({
+        Title = "Welcome",
+        Content = "ShadowCore GUI by Sin.\nUse the tabs to access features!"
     })
+    Fluent:Notify({ Title = "Notification", Content = "Welcome to ShadowCore!", Duration = 5 })
+end
 
-    -- Reset FOV Button
-    Tabs.Visual:AddButton({
-        Title = "Reset FOV",
-        Description = "Reset camera to default FOV",
+-- ======================= Automation Tab =======================
+do
+    Tabs.Automation:AddParagraph({
+        Title = "Automation",
+        Content = "Here you can enable general automation features."
+    })
+end
+
+-- ======================= Fun Tab =======================
+do
+    Tabs.Fun:AddButton({
+        Title = "Fun Button",
+        Description = "Just for fun!",
         Callback = function()
-            camera.FieldOfView = defaultFOV
+            print("Fun feature clicked!")
         end
     })
+end
 
-    -- Fog Toggle
-    Tabs.Visual:AddToggle("FogToggle", {
-        Title = "Fog",
-        Description = "Enable/Disable in-game fog",
-        Default = true,
-        Callback = function(State)
-            if State then
-                Lighting.FogEnd = 100
-            else
-                Lighting.FogEnd = 1e6
+-- ======================= Auto Bandage Tab =======================
+do
+    local AutoBandage = Tabs.AutoBandage:AddToggle("AutoBandage", {
+        Title = "Auto Bandage",
+        Description = "Automatically heals your player.",
+        Default = false
+    })
+    AutoBandage:OnChanged(function(State)
+        task.spawn(function()
+            while State do
+                task.wait(1)
+                local player = game.Players.LocalPlayer
+                if player.Character and player.Character:FindFirstChild("Humanoid") then
+                    local humanoid = player.Character.Humanoid
+                    if humanoid.Health < humanoid.MaxHealth then
+                        humanoid.Health = humanoid.MaxHealth
+                        print("Healed player!")
+                    end
+                end
+                if not AutoBandage.Value then break end
+            end
+        end)
+    end)
+end
+
+-- ======================= Bring Stuff Tab =======================
+do
+    Tabs.BringStuff:AddButton({
+        Title = "Bring Stuff",
+        Description = "Bring all items to your location",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and obj.Name:match("Item") then
+                    obj.CFrame = root.CFrame + Vector3.new(0,5,0)
+                    print("Brought object:", obj.Name)
+                end
             end
         end
     })
+end
 
-    -- Fullbright Toggle
-    local fullbrightConn
-    Tabs.Visual:AddToggle("FullbrightToggle", {
-        Title = "Fullbright / Night Vision",
-        Description = "Brighten the game environment",
-        Default = false,
-        Callback = function(State)
-            if State then
-                Lighting.Ambient = Color3.new(1, 1, 1)
-                Lighting.Brightness = 2
-                fullbrightConn = Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
-                    Lighting.Ambient = Color3.new(1, 1, 1)
-                    Lighting.Brightness = 2
-                end)
-            else
-                if fullbrightConn then fullbrightConn:Disconnect() end
-                Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
-                Lighting.Brightness = 1
+-- ======================= Local Player Tab =======================
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
+
+    local SpeedValue = 16
+    Tabs.LocalPlayer:AddSlider("WalkSpeedSlider", {
+        Title = "Walk Speed", Description = "Adjust your walking speed",
+        Default = 16, Min = 16, Max = 100, Rounding = 1,
+        Callback = function(Value)
+            SpeedValue = Value
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = SpeedValue
             end
         end
     })
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid").WalkSpeed = SpeedValue
+    end)
 
-    -- Player ESP Toggle
-    local playerESPConn
-    Tabs.Visual:AddToggle("PlayerESP", {
-        Title = "Player ESP",
-        Description = "Show name and health of players",
-        Default = false,
-        Callback = function(State)
-            if State then
-                playerESPConn = RunService.RenderStepped:Connect(function()
-                    clearESP(activeESP)
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-                            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-                            if humanoid then
-                                local healthText = string.format("%s | HP: %d", player.Name, math.floor(humanoid.Health))
-                                table.insert(activeESP, createBillboard(player.Character.Head, healthText, Color3.new(1, 1, 0)))
-                            end
+    local InfiniteJumpEnabled = false
+    Tabs.LocalPlayer:AddToggle("InfiniteJumpToggle", {
+        Title = "Infinite Jump", Description = "Jump as many times as you want",
+        Default = false, Callback = function(State) InfiniteJumpEnabled = State end
+    })
+    UserInputService.JumpRequest:Connect(function()
+        if InfiniteJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end)
+
+    local NoClipEnabled = false
+    local NoClipConnection
+    Tabs.LocalPlayer:AddToggle("NoClipToggle", {
+        Title = "No Clip", Description = "Walk through walls",
+        Default = false, Callback = function(State)
+            NoClipEnabled = State
+            if NoClipEnabled then
+                NoClipConnection = RunService.Stepped:Connect(function()
+                    if LocalPlayer.Character then
+                        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then part.CanCollide = false end
                         end
                     end
                 end)
-            else
-                if playerESPConn then playerESPConn:Disconnect() end
-                clearESP(activeESP)
+            elseif NoClipConnection then
+                NoClipConnection:Disconnect()
+                NoClipConnection = nil
+            end
+        end
+    })
+
+    Tabs.LocalPlayer:AddButton({
+        Title = "Reset Character", Description = "Resets your character",
+        Callback = function()
+            if LocalPlayer.Character then
+                LocalPlayer.Character:BreakJoints()
+                print("Character reset!")
+            end
+        end
+    })
+end
+
+-- ======================= Teleport Tab =======================
+do
+    Tabs.Teleport:AddInput("TeleportInput", {
+        Title = "Teleport To (x,y,z)", Default = "0,0,0",
+        Placeholder = "Enter coordinates like 0,5,0",
+        Callback = function(Value)
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local x, y, z = Value:match("([^,]+),([^,]+),([^,]+)")
+                x, y, z = tonumber(x), tonumber(y), tonumber(z)
+                if x and y and z then
+                    root.CFrame = CFrame.new(x,y,z)
+                    print("Teleported to:", x, y, z)
+                else print("Invalid coordinates!") end
+            end
+        end
+    })
+    Tabs.Teleport:AddKeybind("TeleportKey", {
+        Title = "Teleport Key", Mode = "Toggle", Default = "F",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then root.CFrame = CFrame.new(0,10,0) end
+        end
+    })
+    Tabs.Teleport:AddButton({
+        Title = "Teleport to Camp", Description = "Instantly teleport to coordinates 9, 4, -1",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then root.CFrame = CFrame.new(9, 4, -1) end
+        end
+    })
+end
+
+-- ======================= Visual Tab =======================
+do
+    local camera = workspace.CurrentCamera
+    local defaultFOV = camera.FieldOfView
+
+    Tabs.Visual:AddSlider("FOVSlider", {
+        Title = "Field of View", Description = "Change your camera FOV",
+        Default = defaultFOV, Min = 40, Max = 120, Rounding = 0,
+        Callback = function(Value) camera.FieldOfView = Value end
+    })
+    Tabs.Visual:AddButton({
+        Title = "Reset FOV", Description = "Reset camera to default FOV",
+        Callback = function() camera.FieldOfView = defaultFOV end
+    })
+
+    local fogEnabled = true
+    Tabs.Visual:AddToggle("FogToggle", {
+        Title = "Fog", Description = "Enable/Disable in-game fog", Default = true,
+        Callback = function(State)
+            fogEnabled = State
+            game.Lighting.FogEnd = State and 100 or 1e6
+        end
+    })
+
+    local fullBrightConnection
+    Tabs.Visual:AddToggle("FullBrightToggle", {
+        Title = "Fullbright / Night Vision", Description = "See clearly in dark areas", Default = false,
+        Callback = function(State)
+            if State then
+                fullBrightConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                    game.Lighting.Brightness = 2
+                    game.Lighting.ClockTime = 14
+                    game.Lighting.FogEnd = 1e6
+                end)
+            elseif fullBrightConnection then
+                fullBrightConnection:Disconnect()
+                fullBrightConnection = nil
+            end
+        end
+    })
+
+    -- Player ESP
+    local Players = game:GetService("Players")
+    Tabs.Visual:AddToggle("PlayerESP", {
+        Title = "Player ESP", Description = "Show names, health, coords",
+        Default = false, Callback = function(State)
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= Players.LocalPlayer then
+                    if State then
+                        local billboard = Instance.new("BillboardGui", p.Character and p.Character:FindFirstChild("Head") or nil)
+                        billboard.Name = "ESP"
+                        billboard.Size = UDim2.new(0, 200, 0, 50)
+                        billboard.Adornee = p.Character:FindFirstChild("Head")
+                        billboard.AlwaysOnTop = true
+                        local label = Instance.new("TextLabel", billboard)
+                        label.Size = UDim2.new(1, 0, 1, 0)
+                        label.TextColor3 = Color3.new(1,1,1)
+                        label.Text = p.Name
+                        label.BackgroundTransparency = 1
+                    else
+                        if p.Character and p.Character:FindFirstChild("Head") then
+                            local esp = p.Character.Head:FindFirstChild("ESP")
+                            if esp then esp:Destroy() end
+                        end
+                    end
+                end
             end
         end
     })
 
     -- Item ESP
-    local trackedItems = {
-        "Old Axe", "Good Axe", "Strong Axe", "Spear", "Morning Star", "Healing Potion"
-    }
-    local itemESPConn
-    Tabs.Visual:AddToggle("ItemESP", {
-        Title = "Item ESP",
-        Description = "Show selected items through walls",
-        Default = false,
-        Callback = function(State)
-            if State then
-                itemESPConn = RunService.RenderStepped:Connect(function()
-                    clearESP(activeItemESP)
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and table.find(trackedItems, obj.Name) and obj:FindFirstChild("PrimaryPart") then
-                            table.insert(activeItemESP, createBillboard(obj.PrimaryPart, obj.Name, Color3.new(0, 1, 0)))
-                        end
-                    end
-                end)
-            else
-                if itemESPConn then itemESPConn:Disconnect() end
-                clearESP(activeItemESP)
+    local selectedItems = {}
+    local items = {"Medkit","Gun","Ammo","Food"} -- example list
+    for _, itemName in ipairs(items) do
+        Tabs.Visual:AddToggle("ItemESP_"..itemName, {
+            Title = "ESP: "..itemName, Default = false,
+            Callback = function(State)
+                selectedItems[itemName] = State
             end
-        end
-    })
+        })
+    end
 
-    -- Auto Teleport to Nearest Item
-    local teleportConn
-    local teleportDistance = 50
+    -- Auto TP to nearest selected item
+    local maxDistance = 50
     Tabs.Visual:AddSlider("ItemTPDistance", {
-        Title = "Item TP Distance",
-        Description = "Max distance to auto-teleport to items",
-        Default = 50,
-        Min = 10,
-        Max = 500,
-        Rounding = 0,
-        Callback = function(Value)
-            teleportDistance = Value
-        end
+        Title = "Auto TP Distance", Default = 50, Min = 10, Max = 500, Rounding = 0,
+        Callback = function(Value) maxDistance = Value end
     })
-    Tabs.Visual:AddToggle("AutoItemTP", {
-        Title = "Auto TP to Item",
-        Description = "Automatically teleport to nearest tracked item",
-        Default = false,
+    Tabs.Visual:AddToggle("AutoTPItems", {
+        Title = "Auto TP to Items", Default = false,
         Callback = function(State)
-            if State then
-                teleportConn = RunService.Heartbeat:Connect(function()
+            while State do
+                task.wait(1)
+                local player = Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if root then
                     local closest, dist
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and table.find(trackedItems, obj.Name) and obj:FindFirstChild("PrimaryPart") then
-                            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - obj.PrimaryPart.Position).Magnitude
-                            if distance <= teleportDistance and (not dist or distance < dist) then
-                                closest, dist = obj, distance
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") and selectedItems[obj.Name] then
+                            local d = (obj.Position - root.Position).Magnitude
+                            if d <= maxDistance and (not dist or d < dist) then
+                                closest, dist = obj, d
                             end
                         end
                     end
                     if closest then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = closest.PrimaryPart.CFrame + Vector3.new(0, 3, 0)
+                        root.CFrame = closest.CFrame + Vector3.new(0,3,0)
                     end
-                end)
-            else
-                if teleportConn then teleportConn:Disconnect() end
+                end
+                if not Options.AutoTPItems.Value then break end
             end
         end
     })
 end
+
+-- ======================= Settings Tab =======================
+do
+    SaveManager:SetLibrary(Fluent)
+    InterfaceManager:SetLibrary(Fluent)
+    SaveManager:IgnoreThemeSettings()
+    SaveManager:SetIgnoreIndexes({})
+    InterfaceManager:SetFolder("FluentScriptHub")
+    SaveManager:SetFolder("FluentScriptHub/specific-game")
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+    SaveManager:BuildConfigSection(Tabs.Settings)
+end
+
+-- ======================= Initialize GUI =======================
+Window:SelectTab(1)
+Fluent:Notify({ Title = "ShadowCore", Content = "The script has been loaded.", Duration = 8 })
+SaveManager:LoadAutoloadConfig()
