@@ -54,46 +54,57 @@ do
 end
 
 -- Exploits Tab: Powerful features
+
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
--- Variables
 local LocalPlayer = Players.LocalPlayer
-local noclipEnabled = false
-local noclipConn
+local autoEatEnabled = false
+
+-- Remote
+local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
+
+-- List of items to auto-consume
+local AutoEatItems = {
+    "Morsel",
+    "Steak",
+    "Berry",
+    "Cooked Morsel",
+    "Cooked Steak"
+}
+
+-- Function to check and consume
+local function checkAndConsume()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and table.find(AutoEatItems, obj.Name) then
+            local args = { obj }
+            requestConsume:InvokeServer(unpack(args))
+        end
+    end
+end
 
 -- Button
 Tabs.Exploits:AddButton({
-    Title = "Toggle NoClip",
-    Description = "Click to enable/disable NoClip",
+    Title = "Auto Eat Food",
+    Description = "Automatically consumes food items when they appear",
     Callback = function()
-        noclipEnabled = not noclipEnabled -- Toggle state
+        autoEatEnabled = not autoEatEnabled
 
-        if noclipEnabled then
-            -- Start NoClip
-            noclipConn = RunService.Stepped:Connect(function()
-                local char = LocalPlayer.Character
-                if not char then return end
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
+        if autoEatEnabled then
+            Fluent:Notify({Title = "Auto Eat", Content = "Enabled", Duration = 3})
+
+            -- Start running the auto-eat loop
+            noclipConn = RunService.Heartbeat:Connect(function()
+                if autoEatEnabled then
+                    checkAndConsume()
                 end
             end)
-            Fluent:Notify({Title = "NoClip", Content = "NoClip Enabled", Duration = 3})
         else
-            -- Stop NoClip
+            Fluent:Notify({Title = "Auto Eat", Content = "Disabled", Duration = 3})
             if noclipConn then noclipConn:Disconnect() end
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
-                end
-            end
-            Fluent:Notify({Title = "NoClip", Content = "NoClip Disabled", Duration = 3})
         end
     end
 })
@@ -123,6 +134,7 @@ Tabs.Exploits:AddToggle("NoClip", {
         end
     end
 })
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
