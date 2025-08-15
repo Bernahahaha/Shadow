@@ -228,6 +228,22 @@ do
             end
         end
     })
+
+    -- Preset teleport to 9, 4, -1
+    Tabs.Teleport:AddButton({
+        Title = "Teleport to Camp",
+        Description = "Instantly teleport to coordinates 9, 4, -1",
+        Callback = function()
+            local player = game.Players.LocalPlayer
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.CFrame = CFrame.new(9, 4, -1)
+                print("Teleported to: 9, 4, -1")
+            else
+                warn("Cannot teleport: HumanoidRootPart not found.")
+            end
+        end
+    })
 end
 
 -- ======================= Settings Tab =======================
