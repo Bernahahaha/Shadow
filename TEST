@@ -37,7 +37,6 @@ do
         Content = "ShadowCore GUI by Sin.\nUse the tabs to access features!"
     })
 
-    -- Example Notification
     Fluent:Notify({
         Title = "Notification",
         Content = "Welcome to ShadowCore!",
@@ -60,7 +59,6 @@ do
         Description = "Just for fun!",
         Callback = function()
             print("Fun feature clicked!")
-            -- Add your fun logic here
         end
     })
 end
@@ -111,13 +109,84 @@ end
 
 -- ======================= Local Player Tab =======================
 do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
+
+    -- Walk Speed
+    local SpeedValue = 16
+    local SpeedSlider = Tabs.LocalPlayer:AddSlider("WalkSpeedSlider", {
+        Title = "Walk Speed",
+        Description = "Adjust your walking speed",
+        Default = 16,
+        Min = 16,
+        Max = 100,
+        Rounding = 1,
+        Callback = function(Value)
+            SpeedValue = Value
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = SpeedValue
+            end
+        end
+    })
+
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid").WalkSpeed = SpeedValue
+    end)
+
+    -- Infinite Jump
+    local InfiniteJumpEnabled = false
+    Tabs.LocalPlayer:AddToggle("InfiniteJumpToggle", {
+        Title = "Infinite Jump",
+        Description = "Jump as many times as you want",
+        Default = false,
+        Callback = function(State)
+            InfiniteJumpEnabled = State
+        end
+    })
+
+    UserInputService.JumpRequest:Connect(function()
+        if InfiniteJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end)
+
+    -- NoClip
+    local NoClipEnabled = false
+    local NoClipConnection
+    Tabs.LocalPlayer:AddToggle("NoClipToggle", {
+        Title = "No Clip",
+        Description = "Walk through walls",
+        Default = false,
+        Callback = function(State)
+            NoClipEnabled = State
+            if NoClipEnabled then
+                NoClipConnection = RunService.Stepped:Connect(function()
+                    if LocalPlayer.Character then
+                        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+            else
+                if NoClipConnection then
+                    NoClipConnection:Disconnect()
+                    NoClipConnection = nil
+                end
+            end
+        end
+    })
+
+    -- Reset Character
     Tabs.LocalPlayer:AddButton({
         Title = "Reset Character",
         Description = "Resets your character",
         Callback = function()
-            local player = game.Players.LocalPlayer
-            if player.Character then
-                player.Character:BreakJoints()
+            if LocalPlayer.Character then
+                LocalPlayer.Character:BreakJoints()
                 print("Character reset!")
             end
         end
@@ -126,7 +195,6 @@ end
 
 -- ======================= Teleport Tab =======================
 do
-    -- Teleport Input
     Tabs.Teleport:AddInput("TeleportInput", {
         Title = "Teleport To (x,y,z)",
         Default = "0,0,0",
@@ -147,7 +215,6 @@ do
         end
     })
 
-    -- Teleport Keybind
     Tabs.Teleport:AddKeybind("TeleportKey", {
         Title = "Teleport Key",
         Mode = "Toggle",
@@ -156,7 +223,7 @@ do
             local player = game.Players.LocalPlayer
             local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if root then
-                root.CFrame = CFrame.new(0,10,0) -- preset location
+                root.CFrame = CFrame.new(0,10,0)
                 print("Teleported to preset location!")
             end
         end
@@ -179,4 +246,3 @@ end
 Window:SelectTab(1)
 Fluent:Notify({ Title = "ShadowCore", Content = "The script has been loaded.", Duration = 8 })
 SaveManager:LoadAutoloadConfig()
-
