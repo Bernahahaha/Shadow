@@ -342,14 +342,19 @@ end
 
 -- Teleport Tab: Movement & Locations
 do
-    local tab = Tabs.Teleport
-    tab:AddSection("Teleportation")
-    tab:AddButton({
-        Title = "Teleport to Spawn",
-        Callback = function()
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to spawn!", Duration = 2 })
+local tab = Tabs.Teleport
+tab:AddSection("Teleportation")
+
+tab:AddButton({
+    Title = "Camp",
+    Callback = function()
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(12, 4, 10)
+            Fluent:Notify({ Title = "Teleport", Content = "Teleported to Camp!", Duration = 2 })
         end
-    })
+    end
+})
     tab:AddDropdown("PlayersList", {
         Title = "Teleport to Player",
         Values = (function()
