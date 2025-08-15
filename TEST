@@ -1,27 +1,28 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- GUI dimensions
 local guiWidth, guiHeight = 400, 300
 
--- Upgraded size for modern exploit GUIs (reference: 900x500)
+-- Create main window
 local Window = Fluent:CreateWindow({
-    Title = "Fluent " .. Fluent.Version,
-    SubTitle = "by dawid",
+    Title = "ShadowCore " .. Fluent.Version,
+    SubTitle = "by Sin",
     TabWidth = 160,
-    Size = UDim2.fromOffset(400, 300),
-    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
+    Size = UDim2.fromOffset(guiWidth, guiHeight),
+    Acrylic = true,        -- Enable blur (set false if problematic)
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
---Fluent provides Lucide Icons https://lucide.dev/icons/ for the tabs, icons are optional
+-- Create tabs (you can add more tabs here)
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
 local Options = Fluent.Options
-
 do
     Fluent:Notify({
         Title = "Notification",
