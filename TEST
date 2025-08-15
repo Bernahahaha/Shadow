@@ -337,16 +337,14 @@ do
         Callback = function(v)
             Fluent:Notify({ Title = "Farm Delay", Content = "Delay set to " .. v .. "s", Duration = 1.2 })
         end
-    })
-end
+    end
+ })
 
 -- Teleport Tab: Movement & Locations
-
--- Teleport Tab
+do
 local TeleportTab = Tabs.Teleport
 teleportTab:AddSection("Teleportation")
 
--- Teleport to Spawn Button
 TeleportTab:AddButton({
     Title = "Teleport to Spawn",
     Callback = function()
