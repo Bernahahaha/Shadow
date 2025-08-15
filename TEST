@@ -55,28 +55,31 @@ end
 
 -- Exploits Tab: Powerful features
 do
-    local tab = Tabs.Exploits
-    tab:AddSection("Player Exploits")
-    tab:AddToggle("GodMode", { Title = "God Mode", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "God Mode", Content = v and "God Mode Enabled!" or "God Mode Disabled!", Duration = 2 })
-    end)
-    tab:AddToggle("NoClip", { Title = "NoClip", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "NoClip", Content = v and "NoClip On (walk through walls)" or "NoClip Off", Duration = 2 })
-    end)
-    tab:AddToggle("Fly", { Title = "Fly", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Fly", Content = v and "Fly Enabled!" or "Fly Disabled!", Duration = 2 })
-    end)
-    tab:AddToggle("InfiniteJump", { Title = "Infinite Jump", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Infinite Jump", Content = v and "Infinite Jump ON!" or "Infinite Jump OFF!", Duration = 2 })
-    end)
-    tab:AddButton({
-        Title = "Destroy All Doors",
-        Callback = function()
-            Fluent:Notify({ Title = "Exploit", Content = "All doors destroyed (example)!", Duration = 2 })
+local noclipEnabled, noclipConn
+Tabs.Exploits:AddToggle("NoClip", {
+      Title = "NoClip",
+    Default = false,
+    Callback = function(state)
+        noclipEnabled = state
+        if state then
+            noclipConn = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end)
+        else
+            if noclipConn then noclipConn:Disconnect() end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
         end
-    })
-end
-
+    end
+})
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
