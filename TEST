@@ -55,6 +55,50 @@ end
 
 -- Exploits Tab: Powerful features
 do
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+-- Variables
+local LocalPlayer = Players.LocalPlayer
+local noclipEnabled = false
+local noclipConn
+
+-- Button
+Tabs.Exploits:AddButton({
+    Title = "Toggle NoClip",
+    Description = "Click to enable/disable NoClip",
+    Callback = function()
+        noclipEnabled = not noclipEnabled -- Toggle state
+
+        if noclipEnabled then
+            -- Start NoClip
+            noclipConn = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+            Fluent:Notify({Title = "NoClip", Content = "NoClip Enabled", Duration = 3})
+        else
+            -- Stop NoClip
+            if noclipConn then noclipConn:Disconnect() end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+            Fluent:Notify({Title = "NoClip", Content = "NoClip Disabled", Duration = 3})
+        end
+    end
+})
+
 local noclipEnabled, noclipConn
 Tabs.Exploits:AddToggle("NoClip", {
       Title = "NoClip",
