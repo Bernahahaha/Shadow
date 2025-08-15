@@ -19,7 +19,7 @@ local Options = Fluent.Options
 -- ======================= Tabs =======================
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Automation = Window:AddTab({ Title = "Automation", Icon = "robot" }),
+   Automation = Window:AddTab({ Title = "Automation", Icon = "cog" }),
     Fun = Window:AddTab({ Title = "Fun", Icon = "smile" }),
     AutoBandage = Window:AddTab({ Title = "Auto Bandage", Icon = "heart" }),
     BringStuff = Window:AddTab({ Title = "Bring Stuff", Icon = "hand" }),
@@ -30,14 +30,304 @@ local Tabs = {
 }
 
 -- ======================= Main Tab =======================
-Tabs.Main:AddParagraph({Title = "Welcome", Content = "ShadowCore GUI by Sin.\nUse the tabs to access features!"})
-Fluent:Notify({ Title = "Notification", Content = "Welcome to ShadowCore!", Duration = 5 })
+Tabs.Main:AddParagraph({
+    Title = "Credits",
+    Content = "GUI made by Sin\nRoblox: MIJ_LIM2021 Sin\nDiscord: https://discord.gg/vBEFRWTP"
+})
+
+Tabs.Main:AddButton({
+    Title = "Join My Discord",
+    Description = "Click to join my Discord server",
+    Callback = function()
+        setclipboard("https://discord.gg/vBEFRWTP")
+        Fluent:Notify({
+            Title = "Discord Link Copied",
+            Content = "Invite link copied to clipboard!",
+            Duration = 5
+        })
+    end
+})
 
 -- ======================= Automation Tab =======================
 Tabs.Automation:AddParagraph({Title = "Automation", Content = "Here you can enable general automation features."})
 
--- ======================= Fun Tab =======================
-Tabs.Fun:AddButton({Title = "Fun Button", Description = "Just for fun!", Callback = function() print("Fun feature clicked!") end})
+-- ======================= Fun Tab (Merged) =======================
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local StarterGui = game:GetService("StarterGui")
+    local Lighting = game:GetService("Lighting")
+    local LocalPlayer = Players.LocalPlayer
+
+    local function getRoot()
+        local char = LocalPlayer.Character
+        if char then return char:FindFirstChild("HumanoidRootPart") end
+        return nil
+    end
+
+    -- Spin Player
+    Tabs.Fun:AddButton({
+        Title = "Spin Player",
+        Description = "Spin your character like a Beyblade!",
+        Callback = function()
+            local root = getRoot()
+            if not root then return end
+            for i = 1, 50 do
+                task.wait()
+                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(30), 0)
+            end
+        end
+    })
+
+    -- Launch Into Sky
+    Tabs.Fun:AddButton({
+        Title = "Launch Into Sky",
+        Description = "Send yourself flying up!",
+        Callback = function()
+            local root = getRoot()
+            if root then root.Velocity = Vector3.new(0, 200, 0) end
+        end
+    })
+
+    -- Fake Kill (Troll)
+    Tabs.Fun:AddButton({
+        Title = "Fake Kill (Troll)",
+        Description = "Pretend to die then auto-respawn",
+        Callback = function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.Health = 0
+                task.delay(1, function()
+                    LocalPlayer:LoadCharacter()
+                end)
+            end
+        end
+    })
+
+    -- Earthquake View (toggle)
+    local earthquakeEnabled = false
+    Tabs.Fun:AddToggle("EarthquakeToggle", {
+        Title = "Earthquake View",
+        Description = "Shake your camera like an earthquake",
+        Default = false,
+        Callback = function(state) earthquakeEnabled = state end
+    })
+    RunService.RenderStepped:Connect(function()
+        if earthquakeEnabled and workspace.CurrentCamera then
+            local cam = workspace.CurrentCamera
+            cam.CFrame = cam.CFrame * CFrame.Angles(
+                math.rad(math.random(-2, 2)),
+                math.rad(math.random(-2, 2)),
+                0
+            )
+        end
+    end)
+
+    -- Random Teleport
+    Tabs.Fun:AddButton({
+        Title = "Random Teleport",
+        Description = "Teleport to a random spot in the map",
+        Callback = function()
+            local root = getRoot()
+            if root then
+                local randPos = Vector3.new(math.random(-500, 500), 10, math.random(-500, 500))
+                root.CFrame = CFrame.new(randPos)
+            end
+        end
+    })
+
+    -- Flip Over
+    Tabs.Fun:AddButton({
+        Title = "Flip Over",
+        Description = "Turns your character upside down",
+        Callback = function()
+            local root = getRoot()
+            if root then
+                root.CFrame = root.CFrame * CFrame.Angles(math.rad(180), 0, 0)
+            end
+        end
+    })
+
+    -- Backflip (single)
+    Tabs.Fun:AddButton({
+        Title = "Backflip",
+        Description = "Do a backflip animation",
+        Callback = function()
+            local root = getRoot()
+            if not root then return end
+            for i = 1, 36 do
+                task.wait(0.02)
+                root.CFrame = root.CFrame * CFrame.Angles(math.rad(-10), 0, 0)
+            end
+        end
+    })
+
+    -- Backflip Loop (toggle)
+    local backflipLoop = false
+    Tabs.Fun:AddToggle("BackflipLoop", {
+        Title = "Backflip Loop",
+        Description = "Keep doing backflips until toggled off",
+        Default = false,
+        Callback = function(state)
+            backflipLoop = state
+            task.spawn(function()
+                while backflipLoop do
+                    local root = getRoot()
+                    if not root then break end
+                    for i = 1, 36 do
+                        if not backflipLoop then break end
+                        task.wait(0.02)
+                        root.CFrame = root.CFrame * CFrame.Angles(math.rad(-10), 0, 0)
+                    end
+                    task.wait(0.2)
+                end
+            end)
+        end
+    })
+
+    -- Handstand (2s hold)
+    Tabs.Fun:AddButton({
+        Title = "Handstand",
+        Description = "Flip upside down and hold",
+        Callback = function()
+            local root = getRoot()
+            if not root then return end
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(180), 0, 0)
+            task.wait(2)
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(180), 0, 0) -- revert
+        end
+    })
+
+    -- One-arm Handstand (tilted, 2s hold)
+    Tabs.Fun:AddButton({
+        Title = "One-arm Handstand",
+        Description = "Balance on one arm like a boss",
+        Callback = function()
+            local root = getRoot()
+            if not root then return end
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(180), 0, math.rad(15))
+            task.wait(2)
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(180), 0, math.rad(-15)) -- revert
+        end
+    })
+
+    -- Planche (2s hold)
+    Tabs.Fun:AddButton({
+        Title = "Planche",
+        Description = "Hold yourself parallel to the ground",
+        Callback = function()
+            local root = getRoot()
+            if not root then return end
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(90), 0, 0)
+            task.wait(2)
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90), 0, 0) -- revert
+        end
+    })
+
+    -- Ragdoll Mode
+    Tabs.Fun:AddButton({
+        Title = "Ragdoll Mode",
+        Description = "Makes you flop like a ragdoll",
+        Callback = function()
+            local char = LocalPlayer.Character
+            if not char then return end
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("Motor6D") then
+                    local socket = Instance.new("BallSocketConstraint")
+                    local a1 = Instance.new("Attachment")
+                    local a2 = Instance.new("Attachment")
+                    a1.Parent = part.Part0
+                    a2.Parent = part.Part1
+                    socket.Attachment0 = a1
+                    socket.Attachment1 = a2
+                    socket.Parent = part.Part0
+                    part:Destroy()
+                end
+            end
+        end
+    })
+
+    -- Fake Chat Spam (client-side only)
+    Tabs.Fun:AddButton({
+        Title = "Fake Chat Spam",
+        Description = "Spam funny messages in YOUR chat (nobody else sees it)",
+        Callback = function()
+            for i = 1, 10 do
+                StarterGui:SetCore("ChatMakeSystemMessage", {
+                    Text = "[ShadowCore Troll]: I am under your bed " .. tostring(math.random(1000,9999)),
+                    Color = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255)),
+                    Font = Enum.Font.SourceSansBold,
+                    FontSize = Enum.FontSize.Size24
+                })
+                task.wait(0.3)
+            end
+        end
+    })
+
+    -- Crazy Walk (toggle)
+    local crazyWalk = false
+    Tabs.Fun:AddToggle("CrazyWalkToggle", {
+        Title = "Crazy Walk",
+        Description = "Your legs go nuts when walking",
+        Default = false,
+        Callback = function(state) crazyWalk = state end
+    })
+    RunService.Stepped:Connect(function()
+        if crazyWalk then
+            local root = getRoot()
+            if root then
+                root.CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(math.random(-10, 10)))
+            end
+        end
+    end)
+
+    -- Invert Screen Colors (5s)
+    Tabs.Fun:AddButton({
+        Title = "Invert Screen Colors",
+        Description = "Mess up your vision for 5 seconds",
+        Callback = function()
+            local invert = Instance.new("ColorCorrectionEffect")
+            invert.Name = "SC_InvertColors"
+            invert.Contrast = -2
+            invert.Brightness = 0.1
+            invert.Saturation = -3
+            invert.Parent = Lighting
+            task.delay(5, function()
+                if invert then invert:Destroy() end
+            end)
+        end
+    })
+
+    -- Clown Mode (Ultimate Chaos)
+    Tabs.Fun:AddButton({
+        Title = "Clown Mode",
+        Description = "Spin + crazy walk + earthquake + inverted colors",
+        Callback = function()
+            earthquakeEnabled = true
+            crazyWalk = true
+            local invert = Instance.new("ColorCorrectionEffect")
+            invert.Name = "SC_ClownInvert"
+            invert.Contrast = -2
+            invert.Brightness = 0.1
+            invert.Saturation = -3
+            invert.Parent = Lighting
+
+            local root = getRoot()
+            if root then
+                for i = 1, 100 do
+                    task.wait(0.05)
+                    root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(20), 0)
+                end
+            end
+
+            task.delay(5, function()
+                earthquakeEnabled = false
+                crazyWalk = false
+                if invert then invert:Destroy() end
+            end)
+        end
+    })
+end
 
 -- ======================= Auto Bandage Tab =======================
 do
