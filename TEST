@@ -506,6 +506,7 @@ Tabs.Visuals:AddToggle("NoFog", {
         end
     end
 })
+
 Tabs.Visuals:AddSection("ESP GEARS")
 local ItemESPEnabled = false
 local AutoTPEnabled = false
