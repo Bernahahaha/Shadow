@@ -52,3 +52,148 @@ do
         end
     })
 end
+-- ================= Exploits Tab =================
+do
+    local tab = Tabs.Exploits
+    tab:AddSection("Exploits")
+
+    -- ==== Auto Eat ====
+    local autoEatEnabled, autoEatRange, autoEatConn = false, 300, nil
+    local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
+    local AllFoods = {"Morsel","Steak","Berry","Cooked Morsel","Cooked Steak","Cake","Carrot"}
+    local SelectedFoods = AllFoods
+
+    local function checkAndConsume()
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = char.HumanoidRootPart
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and table.find(SelectedFoods,obj.Name) then
+                local primaryPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
+                if primaryPart and (primaryPart.Position-hrp.Position).Magnitude <= autoEatRange then
+                    pcall(function() requestConsume:InvokeServer(obj) end)
+                end
+            end
+        end
+    end
+
+    tab:AddDropdown({
+        Title="Select Foods",
+        Description="Choose foods to auto-eat",
+        Options=AllFoods,
+        MultiSelect=true,
+        Default=AllFoods,
+        Callback=function(selected)
+            SelectedFoods=selected
+            Fluent:Notify({Title="Auto Eat", Content="Selected foods updated", Duration=2})
+        end
+    })
+
+    tab:AddButton({
+        Title="Toggle Auto Eat",
+        Description="Automatically consume selected foods",
+        Callback=function()
+            autoEatEnabled = not autoEatEnabled
+            if autoEatEnabled then
+                Fluent:Notify({Title="Auto Eat", Content="Enabled", Duration=2})
+                autoEatConn = RunService.Heartbeat:Connect(function() if autoEatEnabled then checkAndConsume() end end)
+            else
+                Fluent:Notify({Title="Auto Eat", Content="Disabled", Duration=2})
+                if autoEatConn then autoEatConn:Disconnect() end
+            end
+        end
+    })
+
+    -- ==== NoClip ====
+    local noclipEnabled, noclipConn = false, nil
+    tab:AddButton({
+        Title="Toggle NoClip",
+        Description="Enable/Disable NoClip",
+        Callback=function()
+            noclipEnabled = not noclipEnabled
+            local char = LocalPlayer.Character
+            if noclipEnabled then
+                Fluent:Notify({Title="NoClip", Content="Enabled", Duration=2})
+                noclipConn = RunService.Stepped:Connect(function()
+                    if not char then return end
+                    for _, part in ipairs(char:GetChildren()) do if part:IsA("BasePart") then part.CanCollide=false end end
+                end)
+            else
+                Fluent:Notify({Title="NoClip", Content="Disabled", Duration=2})
+                if noclipConn then noclipConn:Disconnect() end
+                if char then for _, part in ipairs(char:GetChildren()) do if part:IsA("BasePart") then part.CanCollide=true end end end
+            end
+        end
+    })
+
+    -- ==== Kill Aura ====
+    local KillAuraEnabled = false
+    local attackRange, attackCooldown = 30, 0.5
+    local lastAttackTimes = {}
+    local useWhitelist, attackAllAtOnce = true, false
+    local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword"}
+    local allTargets = {"Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite","Arctic Fox","Black Robe Cultists","Red Robe Cultists"}
+    local targetWhitelist = {}
+    for _, n in ipairs(allTargets) do targetWhitelist[n]=true end
+    local RemoteToolDamage = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("ToolDamageObject")
+
+    local function findBestWeapon()
+        local inv = LocalPlayer:FindFirstChild("Inventory")
+        if not inv then return nil end
+        for _, w in ipairs(weaponPriority) do
+            local f = inv:FindFirstChild(w)
+            if f then return f end
+        end
+        return nil
+    end
+
+    local function isTargetValid(target,hrp)
+        if not target or not target.PrimaryPart then return false end
+        if useWhitelist and not targetWhitelist[target.Name] then return false end
+        return (target.PrimaryPart.Position-hrp.Position).Magnitude<=attackRange
+    end
+
+    tab:AddSlider("AttackRange",{Title="Attack Range", Min=5, Max=100, Default=attackRange, Rounding=0, Suffix=" studs", Callback=function(v) attackRange=v end})
+    tab:AddSlider("AttackCooldown",{Title="Attack Cooldown", Min=0.1, Max=2, Default=attackCooldown, Rounding=2, Suffix=" sec", Callback=function(v) attackCooldown=v end})
+    tab:AddToggle("UseWhitelist",{Title="Use Target Whitelist", Default=useWhitelist, Callback=function(v) useWhitelist=v end})
+    tab:AddToggle("AttackAllAtOnce",{Title="Attack All Targets At Once", Default=attackAllAtOnce, Callback=function(v) attackAllAtOnce=v end})
+
+    tab:AddToggle("KillAura",{Title="Kill Aura", Default=false, Callback=function(enabled)
+        KillAuraEnabled = enabled
+        if enabled then
+            Fluent:Notify({Title="Kill Aura", Content="Enabled", Duration=2})
+            task.spawn(function()
+                while KillAuraEnabled do
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if not hrp then task.wait(0.5) continue end
+                    local weapon=findBestWeapon()
+                    if not weapon then task.wait(1) continue end
+                    local charactersFolder=Workspace:FindFirstChild("Characters")
+                    if not charactersFolder then task.wait(0.5) continue end
+                    if attackAllAtOnce then
+                        for _,tgt in ipairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(tgt,hrp) then
+                                pcall(function() RemoteToolDamage:InvokeServer(tgt,weapon,"3_"..tostring(weapon:GetAttribute("Owner") or ""),tgt.PrimaryPart.CFrame) end)
+                            end
+                        end
+                        task.wait(attackCooldown)
+                    else
+                        for _,tgt in ipairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(tgt,hrp) then
+                                local now=tick()
+                                if not lastAttackTimes[tgt] or (now-lastAttackTimes[tgt])>=attackCooldown then
+                                    pcall(function() RemoteToolDamage:InvokeServer(tgt,weapon,"3_"..tostring(weapon:GetAttribute("Owner") or ""),tgt.PrimaryPart.CFrame) end)
+                                    lastAttackTimes[tgt]=now
+                                end
+                            end
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        else
+            Fluent:Notify({Title="Kill Aura", Content="Disabled", Duration=2})
+            lastAttackTimes={}
+        end
+    end})
+end
