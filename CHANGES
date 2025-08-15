@@ -54,28 +54,111 @@ do
 end
 
 -- Exploits Tab: Powerful features
-do
-    local tab = Tabs.Exploits
-    tab:AddSection("Player Exploits")
-    tab:AddToggle("GodMode", { Title = "God Mode", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "God Mode", Content = v and "God Mode Enabled!" or "God Mode Disabled!", Duration = 2 })
-    end)
-    tab:AddToggle("NoClip", { Title = "NoClip", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "NoClip", Content = v and "NoClip On (walk through walls)" or "NoClip Off", Duration = 2 })
-    end)
-    tab:AddToggle("Fly", { Title = "Fly", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Fly", Content = v and "Fly Enabled!" or "Fly Disabled!", Duration = 2 })
-    end)
-    tab:AddToggle("InfiniteJump", { Title = "Infinite Jump", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Infinite Jump", Content = v and "Infinite Jump ON!" or "Infinite Jump OFF!", Duration = 2 })
-    end)
-    tab:AddButton({
-        Title = "Destroy All Doors",
-        Callback = function()
-            Fluent:Notify({ Title = "Exploit", Content = "All doors destroyed (example)!", Duration = 2 })
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local autoEatEnabled = false
+local autoEatRange = 300 -- Updated range
+
+-- Remote
+local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
+
+-- Full list of foods
+local AllFoods = {
+    "Morsel",
+    "Steak",
+    "Berry",
+    "Cooked Morsel",
+    "Cooked Steak",
+    "Cake",
+    "Carrot"
+}
+
+-- Selected foods to eat (default: all)
+local SelectedFoods = AllFoods
+
+-- Function to check and consume
+local function checkAndConsume()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and table.find(SelectedFoods, obj.Name) then
+            local primaryPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
+            if primaryPart and (primaryPart.Position - hrp.Position).Magnitude <= autoEatRange then
+                local args = { obj }
+                requestConsume:InvokeServer(unpack(args))
+            end
         end
-    })
+    end
 end
+
+-- Dropdown to select foods
+Tabs.Exploits:AddDropdown({
+    Title = "Select Foods",
+    Description = "Choose which foods to auto-consume",
+    Options = AllFoods,
+    MultiSelect = true,
+    Default = AllFoods,
+    Callback = function(selected)
+        SelectedFoods = selected
+        Fluent:Notify({Title = "Auto Eat", Content = "Selected foods updated", Duration = 3})
+    end
+})
+
+-- Button
+Tabs.Exploits:AddButton({
+    Title = "Auto Eat Food",
+    Description = "Automatically consumes selected foods within range",
+    Callback = function()
+        autoEatEnabled = not autoEatEnabled
+
+        if autoEatEnabled then
+            Fluent:Notify({Title = "Auto Eat", Content = "Enabled", Duration = 3})
+
+            -- Start running the auto-eat loop
+            noclipConn = RunService.Heartbeat:Connect(function()
+                if autoEatEnabled then
+                    checkAndConsume()
+                end
+            end)
+        else
+            Fluent:Notify({Title = "Auto Eat", Content = "Disabled", Duration = 3})
+            if noclipConn then noclipConn:Disconnect() end
+        end
+    end
+})
+
+local noclipEnabled, noclipConn
+Tabs.Exploits:AddToggle("NoClip", {
+      Title = "NoClip",
+    Default = false,
+    Callback = function(state)
+        noclipEnabled = state
+        if state then
+            noclipConn = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end)
+        else
+            if noclipConn then noclipConn:Disconnect() end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+        end
+    end
+})
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -230,9 +313,6 @@ Tabs.Exploits:AddToggle("KillAuraAdvanced", {
         end
     end
 })
-
-
-
 
 -- Automation Tab: Farming and Automation
 do
