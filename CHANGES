@@ -54,67 +54,27 @@ do
 end
 
 -- Exploits Tab: Powerful features
-local tab = Tabs.Exploits
-tab:AddSection("Player Exploits")
-
--- Helper function for notifications
-local function notify(title, enabledText, disabledText, state)
-    Fluent:Notify({
-        Title = title,
-        Content = state and enabledText or disabledText,
-        Duration = 2
+do
+    local tab = Tabs.Exploits
+    tab:AddSection("Player Exploits")
+    tab:AddToggle("GodMode", { Title = "God Mode", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "God Mode", Content = v and "God Mode Enabled!" or "God Mode Disabled!", Duration = 2 })
+    end)
+    tab:AddToggle("NoClip", { Title = "NoClip", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "NoClip", Content = v and "NoClip On (walk through walls)" or "NoClip Off", Duration = 2 })
+    end)
+    tab:AddToggle("Fly", { Title = "Fly", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "Fly", Content = v and "Fly Enabled!" or "Fly Disabled!", Duration = 2 })
+    end)
+    tab:AddToggle("InfiniteJump", { Title = "Infinite Jump", Default = false }):OnChanged(function(v)
+        Fluent:Notify({ Title = "Infinite Jump", Content = v and "Infinite Jump ON!" or "Infinite Jump OFF!", Duration = 2 })
+    end)
+    tab:AddButton({
+        Title = "Destroy All Doors",
+        Callback = function()
+            Fluent:Notify({ Title = "Exploit", Content = "All doors destroyed (example)!", Duration = 2 })
+        end
     })
-end
-
--- God Mode Toggle
-tab:AddToggle("GodMode", {
-    Title = "God Mode",
-    Default = false
-}):OnChanged(function(state)
-    notify("God Mode", "God Mode Enabled!", "God Mode Disabled!", state)
-    -- Insert actual GodMode logic here
-end)
-
--- NoClip Toggle
-tab:AddToggle("NoClip", {
-    Title = "NoClip",
-    Default = false
-}):OnChanged(function(state)
-    notify("NoClip", "NoClip On (walk through walls)", "NoClip Off", state)
-    -- Insert NoClip logic here
-end)
-
--- Fly Toggle
-tab:AddToggle("Fly", {
-    Title = "Fly",
-    Default = false
-}):OnChanged(function(state)
-    notify("Fly", "Fly Enabled!", "Fly Disabled!", state)
-    -- Insert Fly logic here
-end)
-
--- Infinite Jump Toggle
-tab:AddToggle("InfiniteJump", {
-    Title = "Infinite Jump",
-    Default = false
-}):OnChanged(function(state)
-    notify("Infinite Jump", "Infinite Jump ON!", "Infinite Jump OFF!", state)
-    -- Insert Infinite Jump logic here
-end)
-
--- Destroy All Doors Button
-tab:AddButton({
-    Title = "Destroy All Doors",
-    Callback = function()
-        -- Insert your door-destroying logic here
-        Fluent:Notify({
-            Title = "Exploit",
-            Content = "All doors destroyed (example)!",
-            Duration = 2
-        })
-    end
-})
-
 end
 
 local Players = game:GetService("Players")
