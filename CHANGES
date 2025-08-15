@@ -1,790 +1,198 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-
--- Upgraded size for modern exploit GUIs (reference: 900x500+)
-local guiWidth, guiHeight = 500, 300
-
-local Window = Fluent:CreateWindow({
-    Title = "ShadowCore " .. Fluent.Version,
-    SubTitle = "by Sin",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(guiWidth, guiHeight),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
-
--- Add more exploit tabs for a complete suite
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Exploits = Window:AddTab({ Title = "Exploits", Icon = "zap" }),
-    Automation = Window:AddTab({ Title = "Automation", Icon = "repeat" }),
-    Teleport = Window:AddTab({ Title = "Teleport", Icon = "navigation" }),
-    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
-    ["Local Player"] = Window:AddTab({ Title = "Local Player", Icon = "user" }),
-    Misc = Window:AddTab({ Title = "Misc", Icon = "settings-2" }),
-    GUI = Window:AddTab({ Title = "GUI", Icon = "maximize" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-}
-
-local Options = Fluent.Options
-
--- Main Tab: Overview & Quick Access
-do
-    Tabs.Main:AddParagraph({
-        Title = "Welcome to ShadowCore!",
-        Content = "A premium, modern exploit GUI for Roblox.\nAll."
-    })
-    Tabs.Main:AddButton({
-        Title = "Join Discord",
-        Description = "Copy our Discord link",
-        Callback = function()
-            setclipboard("https://discord.gg/shadowcore")
-            Fluent:Notify({ Title = "Discord", Content = "Link copied to clipboard!", Duration = 3 })
-        end
-    })
-    Tabs.Main:AddButton({
-        Title = "Unload GUI",
-        Description = "Close the menu safely.",
-        Callback = function()
-            Window:Close()
-        end
-    })
-end
-
--- Exploits Tab: Powerful features
--- Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-
-local LocalPlayer = Players.LocalPlayer
-local autoEatEnabled = false
-local autoEatRange = 300 -- Updated range
-
--- Remote
-local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
-
--- Full list of foods
-local AllFoods = {
-    "Morsel",
-    "Steak",
-    "Berry",
-    "Cooked Morsel",
-    "Cooked Steak",
-    "Cake",
-    "Carrot"
-}
-
--- Selected foods to eat (default: all)
-local SelectedFoods = AllFoods
-
--- Function to check and consume
-local function checkAndConsume()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and table.find(SelectedFoods, obj.Name) then
-            local primaryPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
-            if primaryPart and (primaryPart.Position - hrp.Position).Magnitude <= autoEatRange then
-                local args = { obj }
-                requestConsume:InvokeServer(unpack(args))
-            end
-        end
-    end
-end
-
--- Dropdown to select foods
-Tabs.Exploits:AddDropdown({
-    Title = "Select Foods",
-    Description = "Choose which foods to auto-consume",
-    Options = AllFoods,
-    MultiSelect = true,
-    Default = AllFoods,
-    Callback = function(selected)
-        SelectedFoods = selected
-        Fluent:Notify({Title = "Auto Eat", Content = "Selected foods updated", Duration = 3})
-    end
-})
-
--- Button
-Tabs.Exploits:AddButton({
-    Title = "Auto Eat Food",
-    Description = "Automatically consumes selected foods within range",
-    Callback = function()
-        autoEatEnabled = not autoEatEnabled
-
-        if autoEatEnabled then
-            Fluent:Notify({Title = "Auto Eat", Content = "Enabled", Duration = 3})
-
-            -- Start running the auto-eat loop
-            noclipConn = RunService.Heartbeat:Connect(function()
-                if autoEatEnabled then
-                    checkAndConsume()
-                end
-            end)
-        else
-            Fluent:Notify({Title = "Auto Eat", Content = "Disabled", Duration = 3})
-            if noclipConn then noclipConn:Disconnect() end
-        end
-    end
-})
-
-local noclipEnabled, noclipConn
-Tabs.Exploits:AddToggle("NoClip", {
-      Title = "NoClip",
-    Default = false,
-    Callback = function(state)
-        noclipEnabled = state
-        if state then
-            noclipConn = RunService.Stepped:Connect(function()
-                local char = LocalPlayer.Character
-                if not char then return end
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end)
-        else
-            if noclipConn then noclipConn:Disconnect() end
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
-            end
-        end
-    end
-})
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-
--- Helper functions (replace with your own if already defined)
-local function notify(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {Title=title, Text=text, Duration=duration or 2})
-    end)
-end
-
-local function getHRP()
-    local char = LocalPlayer.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
-end
-
-Tabs.Exploits:AddSection("Kill Aura (Advanced)")
-
--- Kill Aura config/state
-local KillAuraEnabled = false
-local attackRange = 30
-local attackCooldown = 0.5
-local lastAttackTimes = {}
-local useWhitelist = true
-local attackAllAtOnce = false
-local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword"}
-
-local allTargets = {
-    "Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite",
-    "Arctic Fox","Black Robe Cultists","Red Robe Cultists"
-}
-local targetWhitelist = {}
-for _, n in ipairs(allTargets) do targetWhitelist[n] = true end
-
-local function findBestWeapon()
-    local inv = LocalPlayer:FindFirstChild("Inventory")
-    if not inv then return nil end
-    for _, w in ipairs(weaponPriority) do
-        local f = inv:FindFirstChild(w)
-        if f then return f end
-    end
-    return nil
-end
-
-local function isTargetValid(target, hrp)
-    if not target or not target.PrimaryPart then return false end
-    if useWhitelist and not targetWhitelist[target.Name] then return false end
-    local dist = (target.PrimaryPart.Position - hrp.Position).Magnitude
-    return dist <= attackRange
-end
-
-Tabs.Exploits:AddSlider("AttackRange", {
-    Title = "Attack Range",
-    Min = 5,
-    Max = 100,
-    Default = attackRange,
-    Rounding = 0,
-    Suffix = " studs",
-    Callback = function(v) attackRange = v end
-})
-
-Tabs.Exploits:AddSlider("AttackCooldown", {
-    Title = "Attack Cooldown",
-    Min = 0.1,
-    Max = 2,
-    Default = attackCooldown,
-    Rounding = 2,
-    Suffix = " sec",
-    Callback = function(v) attackCooldown = v end
-})
-
-Tabs.Exploits:AddToggle("UseTargetWhitelist", {
-    Title = "Use Target Whitelist",
-    Default = useWhitelist,
-    Callback = function(v) useWhitelist = v end
-})
-
-Tabs.Exploits:AddToggle("AttackAllAtOnce", {
-    Title = "Attack All Targets At Once",
-    Default = attackAllAtOnce,
-    Callback = function(v) attackAllAtOnce = v end
-})
-
-Tabs.Exploits:AddDropdown("WeaponPriority", {
-    Title = "Weapon Priority",
-    Values = weaponPriority,
-    Default = weaponPriority[1],
-    Multi = false,
-    Callback = function(val)
-        notify("Kill Aura", "Priority head set to: "..tostring(val), 3)
-    end
-})
-
-Tabs.Exploits:AddToggle("KillAuraAdvanced", {
-    Title = "Kill Aura (Advanced)",
-    Default = false,
-    Callback = function(enabled)
-        KillAuraEnabled = enabled
-        if enabled then
-            notify("Kill Aura", "Enabled", 3)
-            local RemoteToolDamage = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("ToolDamageObject")
-            task.spawn(function()
-                while KillAuraEnabled do
-                    local hrp = getHRP()
-                    if not hrp then task.wait(0.5) continue end
-                    local weapon = findBestWeapon()
-                    if not weapon or not RemoteToolDamage then
-                        task.wait(1)
-                        continue
-                    end
-                    local ownerId = weapon:GetAttribute("Owner") or ""
-                    local charactersFolder = Workspace:FindFirstChild("Characters")
-                    if not charactersFolder then task.wait(0.5) continue end
-
-                    if attackAllAtOnce then
-                        local hits = 0
-                        for _, tgt in ipairs(charactersFolder:GetChildren()) do
-                            if isTargetValid(tgt, hrp) then
-                                local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
-                                pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
-                                hits += 1
-                            end
-                        end
-                        if hits > 0 then
-                            pcall(function()
-                                StarterGui:SetCore("SendNotification", {Title="Kill Aura", Text=("Attacked %d targets."):format(hits), Duration=2})
-                            end)
-                        end
-                        task.wait(attackCooldown)
-                    else
-                        for _, tgt in ipairs(charactersFolder:GetChildren()) do
-                            if isTargetValid(tgt, hrp) then
-                                local now = tick()
-                                if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
-                                    local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
-                                    pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
-                                    lastAttackTimes[tgt] = now
-                                    task.wait(0.05)
-                                end
-                            end
-                        end
-                        task.wait(0.05)
-                    end
-                end
-            end)
-        else
-            notify("Kill Aura", "Disabled", 3)
-            lastAttackTimes = {}
-        end
-    end
-})
-
--- Automation Tab: Farming and Automation
-do
-    local tab = Tabs.Automation
-    tab:AddSection("Auto Features")
-    tab:AddToggle("AutoFarm", { Title = "Auto Farm", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Auto Farm", Content = v and "Auto Farm Started!" or "Auto Farm Stopped!", Duration = 2})
-    end)
-    tab:AddToggle("AutoCollect", { Title = "Auto Collect Items", Default = false }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Auto Collect", Content = v and "Collecting items automatically!" or "Auto Collect off!", Duration = 2 })
-    end)
-    tab:AddSlider("FarmDelay", {
-        Title = "Farm Delay (s)",
-        Min = 0.1,
-        Max = 5,
-        Default = 1,
-        Rounding = 1,
-        Callback = function(v)
-            Fluent:Notify({ Title = "Farm Delay", Content = "Delay set to " .. v .. "s", Duration = 1.2 })
-        end
-    })
-end
-
--- Teleport Tab: Movement & Locations
-do
-    local tab = Tabs.Teleport
-    tab:AddSection("Teleportation")
-    tab:AddButton({
-        Title = "Teleport to Spawn",
-        Callback = function()
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to spawn!", Duration = 2 })
-        end
-    })
-    tab:AddDropdown("PlayersList", {
-        Title = "Teleport to Player",
-        Values = (function()
-            local t = {}
-            for _,v in ipairs(game.Players:GetPlayers()) do table.insert(t, v.Name) end
-            return t
-        end)(),
-        Default = 1,
-        Callback = function(name)
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to " .. tostring(name), Duration = 2 })
-        end
-    })
-    tab:AddButton({
-        Title = "Random Teleport",
-        Callback = function()
-            Fluent:Notify({ Title = "Teleport", Content = "Teleported to a random location!", Duration = 2 })
-        end
-    })
-end
-
--- Visuals Tab: ESP and World
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-
-Tabs.Visuals:AddSection("ESP - Color Settings")
-
--- Default ESP color
-local espPlayerColor = Color3.fromRGB(255, 0, 0)
-
-Tabs.Visuals:AddColorpicker("ESPPlayerColor", {
-    Title = "ESP Player Color",
-    Default = espPlayerColor,
-    Callback = function(val)
-        espPlayerColor = val
-        -- Update all existing player highlights instantly
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local hl = p.Character:FindFirstChild("SC_ESP_Highlight")
-                if hl then
-                    hl.FillColor = espPlayerColor
-                end
-            end
-        end
-    end
-})
-
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-
-Tabs.Visuals:AddSection("ESP - Players")
-
-local ESPPlayers = false
-local espData = {}
-
-local function createHealthBar(character)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "SC_ESP_Health"
-    billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
-    billboard.Size = UDim2.new(4, 0, 0.5, 0)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.AlwaysOnTop = true
-
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.BackgroundColor3 = Color3.new(0,0,0)
-    bg.BackgroundTransparency = 0.5
-    bg.BorderSizePixel = 0
-    bg.Parent = billboard
-
-    local bar = Instance.new("Frame")
-    bar.Name = "Bar"
-    bar.Size = UDim2.new(1, 0, 1, 0)
-    bar.BackgroundColor3 = Color3.fromRGB(0,255,0)
-    bar.BorderSizePixel = 0
-    bar.Parent = bg
-
-    billboard.Parent = character
-    return bar
-end
-
-local function createNameLabel(character, nameText)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "SC_ESP_Name"
-    billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
-    billboard.Size = UDim2.new(4, 0, 1, 0)
-    billboard.StudsOffset = Vector3.new(0, 5.25, 0)
-    billboard.AlwaysOnTop = true
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(255,255,0)
-    label.TextStrokeTransparency = 0
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 16
-    label.Text = nameText
-    label.Parent = billboard
-
-    billboard.Parent = character
-    return label
-end
-
-local function createCoordLabel(character)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "SC_ESP_Coord"
-    billboard.Adornee = character:FindFirstChild("HumanoidRootPart")
-    billboard.Size = UDim2.new(4, 0, 1, 0)
-    billboard.StudsOffset = Vector3.new(0, 4, 0)
-    billboard.AlwaysOnTop = true
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(255,255,255)
-    label.TextStrokeTransparency = 0
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.Text = ""
-    label.Parent = billboard
-
-    billboard.Parent = character
-    return label
-end
-
-Tabs.Visuals:AddToggle("ESPPlayers", {
-    Title = "ESP Players (Highlight + Name + Health + Coords)",
-    Default = false,
-    Callback = function(state)
-        ESPPlayers = state
-        if state then
-            task.spawn(function()
-                while ESPPlayers do
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local char = p.Character
-                            -- Highlight
-                            if not char:FindFirstChild("SC_ESP_Highlight") then
-                                local hl = Instance.new("Highlight")
-                                hl.Name = "SC_ESP_Highlight"
-                                hl.Adornee = char
-                                hl.FillColor = Color3.fromRGB(255, 0, 0)
-                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                hl.Parent = char
-                            end
-                            -- Health
-                            if not char:FindFirstChild("SC_ESP_Health") then
-                                espData[char] = espData[char] or {}
-                                espData[char].HealthBar = createHealthBar(char)
-                            end
-                            -- Name
-                            if not char:FindFirstChild("SC_ESP_Name") then
-                                espData[char] = espData[char] or {}
-                                espData[char].Name = createNameLabel(char, p.Name)
-                            end
-                            -- Coords
-                            if not char:FindFirstChild("SC_ESP_Coord") then
-                                espData[char] = espData[char] or {}
-                                espData[char].Coord = createCoordLabel(char)
-                            end
-                            -- Updates
-                            local hum = char:FindFirstChildOfClass("Humanoid")
-                            local hb = espData[char] and espData[char].HealthBar
-                            if hum and hb then
-                                local pct = math.clamp(hum.Health / math.max(hum.MaxHealth,1), 0, 1)
-                                hb.Size = UDim2.new(pct,0,1,0)
-                                hb.BackgroundColor3 = Color3.fromHSV(pct * 0.3, 1, 1)
-                            end
-                            local coordLabel = espData[char] and espData[char].Coord
-                            local hrp = char:FindFirstChild("HumanoidRootPart")
-                            if coordLabel and hrp then
-                                local pos = hrp.Position
-                                coordLabel.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f", pos.X, pos.Y, pos.Z)
-                            end
-                        end
-                    end
-                    task.wait(0.4)
-                end
-            end)
-        else
-            -- cleanup
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character then
-                    for _, n in ipairs({"SC_ESP_Highlight","SC_ESP_Health","SC_ESP_Name","SC_ESP_Coord"}) do
-                        local obj = p.Character:FindFirstChild(n)
-                        if obj then obj:Destroy() end
-                    end
-                end
-            end
-            espData = {}
-        end
-    end
-})
-
-Tabs.Visuals:AddSection("ESP - Items (simple highlight)")
-local ESPItems = false
-Tabs.Visuals:AddToggle("ESPItems", {
-    Title = "ESP Items (Tools/Models with Handle)",
-    Default = false,
-    Callback = function(state)
-        ESPItems = state
-        if state then
-            task.spawn(function()
-                while ESPItems do
-                    for _, d in ipairs(Workspace:GetDescendants()) do
-                        local isItem = d:IsA("Tool") or (d:IsA("Model") and d:FindFirstChild("Handle"))
-                        if isItem and not d:FindFirstChild("SC_ESP_Item") then
-                            local hl = Instance.new("Highlight")
-                            hl.Name = "SC_ESP_Item"
-                            hl.Adornee = d
-                            hl.FillColor = Color3.fromRGB(0,255,0)
-                            hl.OutlineColor = Color3.fromRGB(255,255,255)
-                            hl.Parent = d
-                        end
-                    end
-                    task.wait(1.5)
-                end
-            end)
-        else
-            for _, d in ipairs(Workspace:GetDescendants()) do
-                local hl = d:FindFirstChild("SC_ESP_Item")
-                if hl then hl:Destroy() end
-            end
-        end
-    end
-})
-
-
-
-
-
--- Place this after you create Tabs.Visuals in your Fluent GUI script
-
+-- ======================= Visual Tab =======================
+local camera = workspace.CurrentCamera
+local defaultFOV = camera.FieldOfView
 local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
-Tabs.Visuals:AddSection("Environment")
+-- ESP storage
+local activeESP = {}
+local activeItemESP = {}
 
--- Fullbright / Night Vision
-local fbEnabled = false
-local oldBright, oldAmb, oldOutdoor
-Tabs.Visuals:AddToggle("Fullbright", {
-    Title = "Fullbright / Night Vision",
-    Default = false,
-    Callback = function(state)
-        fbEnabled = state
-        if state then
-            oldBright, oldAmb, oldOutdoor = Lighting.Brightness, Lighting.Ambient, Lighting.OutdoorAmbient
-            Lighting.Brightness = 3
-            Lighting.Ambient = Color3.fromRGB(128,128,128)
-            Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
-        else
-            if oldBright then Lighting.Brightness = oldBright end
-            if oldAmb then Lighting.Ambient = oldAmb end
-            if oldOutdoor then Lighting.OutdoorAmbient = oldOutdoor end
+-- Function to create a Billboard GUI for ESP
+local function createBillboard(target, text, color)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Billboard"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.Parent = target
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = color
+    label.TextStrokeTransparency = 0
+    label.Font = Enum.Font.SourceSansBold
+    label.TextScaled = true
+    label.Parent = billboard
+
+    return billboard
+end
+
+-- Function to clear ESP
+local function clearESP(storage)
+    for _, v in pairs(storage) do
+        if v and v.Parent then
+            v:Destroy()
         end
     end
-})
+    table.clear(storage)
+end
 
--- No Fog
-local originalFog = {End = Lighting.FogEnd, Start = Lighting.FogStart}
-Tabs.Visuals:AddToggle("NoFog", {
-    Title = "No Fog",
-    Default = false,
-    Callback = function(enabled)
-        if enabled then
-            Lighting.FogEnd = 100000
-            Lighting.FogStart = 0
-        else
-            Lighting.FogEnd = originalFog.End
-            Lighting.FogStart = originalFog.Start
-        end
-    end
-})
-
-
--- Local Player Tab: Advanced, as per your image reference
+-- Visual Tab Content
 do
-    local tab = Tabs["Local Player"]
-
-    tab:AddSection("Self")
-    local FOVToggle = tab:AddToggle("FOVEnabled", { Title = "FOV", Default = false })
-    local FOVSlider = tab:AddSlider("FOV", {
-        Title = "FOV",
-        Default = 60,
-        Min = 30,
+    -- FOV Slider
+    Tabs.Visual:AddSlider("FOVSlider", {
+        Title = "Field of View",
+        Description = "Change your camera FOV",
+        Default = defaultFOV,
+        Min = 40,
         Max = 120,
         Rounding = 0,
         Callback = function(Value)
-            if workspace.CurrentCamera then
-                workspace.CurrentCamera.FieldOfView = Value
+            camera.FieldOfView = Value
+        end
+    })
+
+    -- Reset FOV Button
+    Tabs.Visual:AddButton({
+        Title = "Reset FOV",
+        Description = "Reset camera to default FOV",
+        Callback = function()
+            camera.FieldOfView = defaultFOV
+        end
+    })
+
+    -- Fog Toggle
+    Tabs.Visual:AddToggle("FogToggle", {
+        Title = "Fog",
+        Description = "Enable/Disable in-game fog",
+        Default = true,
+        Callback = function(State)
+            if State then
+                Lighting.FogEnd = 100
+            else
+                Lighting.FogEnd = 1e6
             end
         end
     })
-    FOVSlider:SetValue(60)
-    local function updateFOVSlider()
-        if FOVSlider and FOVSlider.Frame then
-            FOVSlider.Frame.Visible = Options.FOVEnabled.Value
-        end
-    end
-    FOVToggle:OnChanged(updateFOVSlider)
-    updateFOVSlider()
 
-    tab:AddSection("Ambient")
-    tab:AddToggle("RichShader", { Title = "Rich Shader", Default = false })
-    tab:AddColorpicker("ShaderColor", {
-        Title = "Shader Color",
-        Default = Color3.fromRGB(200,200,255)
-    })
-    tab:AddDropdown("LightingTheme", {
-        Title = "Lighting Theme",
-        Values = {"Purple", "Blue", "Red", "Green"},
-        Default = 1
-    })
-    tab:AddToggle("EnableLightingTheme", {
-        Title = "Enable Lighting Theme",
-        Default = false
-    })
-
-    tab:AddSection("Player Tweaks")
-    tab:AddSlider("Walkspeed", {
-        Title = "Walkspeed",
-        Default = 16,
-        Min = 10,
-        Max = 100,
-        Rounding = 0,
-        Callback = function(Value)
-            if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Value
+    -- Fullbright Toggle
+    local fullbrightConn
+    Tabs.Visual:AddToggle("FullbrightToggle", {
+        Title = "Fullbright / Night Vision",
+        Description = "Brighten the game environment",
+        Default = false,
+        Callback = function(State)
+            if State then
+                Lighting.Ambient = Color3.new(1, 1, 1)
+                Lighting.Brightness = 2
+                fullbrightConn = Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+                    Lighting.Ambient = Color3.new(1, 1, 1)
+                    Lighting.Brightness = 2
+                end)
+            else
+                if fullbrightConn then fullbrightConn:Disconnect() end
+                Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+                Lighting.Brightness = 1
             end
         end
     })
-    tab:AddSlider("JumpPower", {
-        Title = "Jump Power",
+
+    -- Player ESP Toggle
+    local playerESPConn
+    Tabs.Visual:AddToggle("PlayerESP", {
+        Title = "Player ESP",
+        Description = "Show name and health of players",
+        Default = false,
+        Callback = function(State)
+            if State then
+                playerESPConn = RunService.RenderStepped:Connect(function()
+                    clearESP(activeESP)
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                            if humanoid then
+                                local healthText = string.format("%s | HP: %d", player.Name, math.floor(humanoid.Health))
+                                table.insert(activeESP, createBillboard(player.Character.Head, healthText, Color3.new(1, 1, 0)))
+                            end
+                        end
+                    end
+                end)
+            else
+                if playerESPConn then playerESPConn:Disconnect() end
+                clearESP(activeESP)
+            end
+        end
+    })
+
+    -- Item ESP
+    local trackedItems = {
+        "Old Axe", "Good Axe", "Strong Axe", "Spear", "Morning Star", "Healing Potion"
+    }
+    local itemESPConn
+    Tabs.Visual:AddToggle("ItemESP", {
+        Title = "Item ESP",
+        Description = "Show selected items through walls",
+        Default = false,
+        Callback = function(State)
+            if State then
+                itemESPConn = RunService.RenderStepped:Connect(function()
+                    clearESP(activeItemESP)
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("Model") and table.find(trackedItems, obj.Name) and obj:FindFirstChild("PrimaryPart") then
+                            table.insert(activeItemESP, createBillboard(obj.PrimaryPart, obj.Name, Color3.new(0, 1, 0)))
+                        end
+                    end
+                end)
+            else
+                if itemESPConn then itemESPConn:Disconnect() end
+                clearESP(activeItemESP)
+            end
+        end
+    })
+
+    -- Auto Teleport to Nearest Item
+    local teleportConn
+    local teleportDistance = 50
+    Tabs.Visual:AddSlider("ItemTPDistance", {
+        Title = "Item TP Distance",
+        Description = "Max distance to auto-teleport to items",
         Default = 50,
-        Min = 30,
-        Max = 200,
+        Min = 10,
+        Max = 500,
         Rounding = 0,
         Callback = function(Value)
-            if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid").JumpPower = Value
+            teleportDistance = Value
+        end
+    })
+    Tabs.Visual:AddToggle("AutoItemTP", {
+        Title = "Auto TP to Item",
+        Description = "Automatically teleport to nearest tracked item",
+        Default = false,
+        Callback = function(State)
+            if State then
+                teleportConn = RunService.Heartbeat:Connect(function()
+                    local closest, dist
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("Model") and table.find(trackedItems, obj.Name) and obj:FindFirstChild("PrimaryPart") then
+                            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - obj.PrimaryPart.Position).Magnitude
+                            if distance <= teleportDistance and (not dist or distance < dist) then
+                                closest, dist = obj, distance
+                            end
+                        end
+                    end
+                    if closest then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = closest.PrimaryPart.CFrame + Vector3.new(0, 3, 0)
+                    end
+                end)
+            else
+                if teleportConn then teleportConn:Disconnect() end
             end
         end
     })
 end
-
--- Misc Tab: Extra Utilities
-do
-    local tab = Tabs.Misc
-    tab:AddSection("Utility")
-    tab:AddButton({
-        Title = "Copy Discord Link",
-        Callback = function()
-            setclipboard("https://discord.gg/shadowcore")
-            Fluent:Notify({ Title = "Discord", Content = "Link copied to clipboard!", Duration = 2 })
-        end
-    })
-    tab:AddButton({
-        Title = "Reset Character",
-        Callback = function()
-            Fluent:Notify({ Title = "Misc", Content = "Character reset (example)!", Duration = 2 })
-        end
-    })
-    tab:AddToggle("AntiAFK", { Title = "Anti-AFK", Default = true }):OnChanged(function(v)
-        Fluent:Notify({ Title = "Anti-AFK", Content = v and "Anti-AFK ON" or "Anti-AFK OFF", Duration = 2 })
-    end)
-end
-
--- GUI Tab: Resize and Theme
-do
-    local tab = Tabs.GUI
-    tab:AddSection("Window")
-    local minW, maxW, minH, maxH = 400, 1400, 300, 900
-    tab:AddSlider("GuiWidth", {
-        Title = "Width",
-        Min = minW,
-        Max = maxW,
-        Default = guiWidth,
-        Rounding = 0,
-        Callback = function(val)
-            local h = Options.GuiHeight.Value or guiHeight
-            Window.Frame.Size = UDim2.fromOffset(val, h)
-        end
-    })
-    tab:AddSlider("GuiHeight", {
-        Title = "Height",
-        Min = minH,
-        Max = maxH,
-        Default = guiHeight,
-        Rounding = 0,
-        Callback = function(val)
-            local w = Options.GuiWidth.Value or guiWidth
-            Window.Frame.Size = UDim2.fromOffset(w, val)
-        end
-    })
-    tab:AddButton({
-        Title = "Reset Size",
-        Description = "Restore default GUI size.",
-        Callback = function()
-            Options.GuiWidth:SetValue(guiWidth)
-            Options.GuiHeight:SetValue(guiHeight)
-            Window.Frame.Size = UDim2.fromOffset(guiWidth, guiHeight)
-            Fluent:Notify({ Title = "GUI Size", Content = "Window size reset!", Duration = 2 })
-        end
-    })
-    tab:AddSection("Theme")
-    tab:AddToggle("DarkMode", { Title = "Enable Dark Mode", Default = true }):OnChanged(function(v)
-        Window:SetTheme(v and "Dark" or "Light")
-        Fluent:Notify({ Title = "Theme", Content = v and "Dark Mode On" or "Light Mode On", Duration = 2 })
-    end)
-end
-
--- Settings Tab: Save/Load/Interface
-do
-    local tab = Tabs.Settings
-    tab:AddParagraph({
-        Title = "Settings",
-        Content = "Configure, save, and load your ShadowCore setup below."
-    })
-end
-
--- Addons: SaveManager & InterfaceManager
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/specific-game")
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-Window:SelectTab(1)
-
-Fluent:Notify({
-    Title = "ShadowCore",
-    Content = "The script has been loaded.",
-    Duration = 8
-})
-
-SaveManager:LoadAutoloadConfig()
