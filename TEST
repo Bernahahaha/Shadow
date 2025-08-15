@@ -342,8 +342,32 @@ end
 
 -- Teleport Tab: Movement & Locations
 
+-- Teleport Tab
+local TeleportTab = Tabs.Teleport
+teleportTab:AddSection("Teleportation")
 
--- Visuals Tab: ESP and World
+-- Teleport to Spawn Button
+TeleportTab:AddButton({
+    Title = "Teleport to Spawn",
+    Callback = function()
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 5, 0) -- Replace with actual spawn coordinates
+            Fluent:Notify({ Title = "Teleport", Content = "Teleported to Spawn!", Duration = 2 })
+        end
+    end
+})
+
+teleportTab:AddButton({
+    Title = "Camp",
+    Callback = function()
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(12, 4, 10)
+            Fluent:Notify({ Title = "Teleport", Content = "Teleported to Camp!", Duration = 2 })
+        end
+    end
+})
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
