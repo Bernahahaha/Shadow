@@ -524,7 +524,7 @@ local allItems = {
 
 for _, itemName in ipairs(allItems) do
     SelectedItems[itemName] = false
-    NightsTab:CreateToggle({
+Tabs.Visuals:AddToggle("ESP: ", {
         Name = "ESP: "..itemName,
         CurrentValue = false,
         Callback = function(state)
@@ -540,7 +540,7 @@ for _, itemName in ipairs(allItems) do
     })
 end
 
-Tabs.Visuals:AddToggle("AUTO TP DISTANCE", {
+Tabs.Visuals:AddToggle("Auto TP Distance", {
     Name = "Auto TP Distance",
     Range = {1, 100},
     Increment = 1,
@@ -549,7 +549,7 @@ Tabs.Visuals:AddToggle("AUTO TP DISTANCE", {
     Callback = function(v) AutoTPDistance = v end
 })
 
-Tabs.Visuals:AddToggle("ESPPlayers", {
+Tabs.Visuals:AddToggle("Auto Teleport to Closest Selected Item", {
     Name = "Auto Teleport to Closest Selected Item",
     CurrentValue = false,
     Callback = function(state) AutoTPEnabled = state end
