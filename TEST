@@ -341,6 +341,7 @@ do
 end
 
 -- Teleport Tab: Movement & Locations
+do
 local tab = Tabs.Teleport
 tab:AddSection("Teleportation")
 tab:AddButton({
