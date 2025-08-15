@@ -3,7 +3,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- ================= Window Setup =================
+-- ================= Create Window =================
 local Window = Fluent:CreateWindow({
     Title = "ShadowCore " .. Fluent.Version,
     SubTitle = "by Sin",
@@ -14,41 +14,243 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- ================= Tabs Setup =================
+-- ================= Tabs =================
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Exploits = Window:AddTab({ Title = "Exploits", Icon = "zap" }),
-    Automation = Window:AddTab({ Title = "Automation", Icon = "repeat" }),
-    Teleport = Window:AddTab({ Title = "Teleport", Icon = "navigation" }),
-    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
-    ["Local Player"] = Window:AddTab({ Title = "Local Player", Icon = "user" }),
-    Misc = Window:AddTab({ Title = "Misc", Icon = "settings-2" }),
-    GUI = Window:AddTab({ Title = "GUI", Icon = "maximize" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    Main = Window:AddTab({Title="Main", Icon=""}),
+    Exploits = Window:AddTab({Title="Exploits", Icon="zap"}),
+    Teleport = Window:AddTab({Title="Teleport", Icon="navigation"}),
+    Visuals = Window:AddTab({Title="Visuals", Icon="eye"}),
+    ["Local Player"] = Window:AddTab({Title="Local Player", Icon="user"}),
+    Misc = Window:AddTab({Title="Misc", Icon="settings-2"}),
+    GUI = Window:AddTab({Title="GUI", Icon="maximize"}),
+    Settings = Window:AddTab({Title="Settings", Icon="settings"})
 }
 
--- ================= Save & Interface Setup =================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+
+-- ================= Helper =================
+local function notify(title,text,duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification",{Title=title,Text=text,Duration=duration or 2})
+    end)
+end
+
+-- ================= Main Tab =================
+do
+    Tabs.Main:AddParagraph({
+        Title="Welcome to ShadowCore!",
+        Content="A premium, modern exploit GUI for Roblox.\nAll features included."
+    })
+    Tabs.Main:AddButton({
+        Title="Join Discord",
+        Description="Copy our Discord link",
+        Callback=function()
+            setclipboard("https://discord.gg/shadowcore")
+            Fluent:Notify({Title="Discord",Content="Link copied!",Duration=3})
+        end
+    })
+    Tabs.Main:AddButton({
+        Title="Unload GUI",
+        Description="Close the menu safely.",
+        Callback=function()
+            Window:Close()
+        end
+    })
+end
+
+-- ================= Exploits Tab =================
+do
+    local tab = Tabs.Exploits
+    tab:AddSection("Exploits")
+
+    -- Auto Eat
+    local autoEatEnabled = false
+    local autoEatRange = 300
+    local autoEatConn
+    local requestConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
+    local AllFoods = {"Morsel","Steak","Berry","Cooked Morsel","Cooked Steak","Cake","Carrot"}
+    local SelectedFoods = AllFoods
+
+    local function checkAndConsume()
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = char.HumanoidRootPart
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and table.find(SelectedFoods,obj.Name) then
+                local primaryPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
+                if primaryPart and (primaryPart.Position-hrp.Position).Magnitude<=autoEatRange then
+                    pcall(function() requestConsume:InvokeServer(obj) end)
+                end
+            end
+        end
+    end
+
+    tab:AddDropdown({
+        Title="Select Foods",
+        Description="Choose foods to auto-eat",
+        Options=AllFoods,
+        MultiSelect=true,
+        Default=AllFoods,
+        Callback=function(selected) SelectedFoods=selected; notify("Auto Eat","Selected foods updated",2) end
+    })
+
+    tab:AddButton({
+        Title="Toggle Auto Eat",
+        Description="Automatically consume selected foods",
+        Callback=function()
+            autoEatEnabled = not autoEatEnabled
+            if autoEatEnabled then
+                notify("Auto Eat","Enabled",2)
+                autoEatConn = RunService.Heartbeat:Connect(function() if autoEatEnabled then checkAndConsume() end end)
+            else
+                notify("Auto Eat","Disabled",2)
+                if autoEatConn then autoEatConn:Disconnect() end
+            end
+        end
+    })
+
+    -- NoClip
+    local noclipEnabled = false
+    local noclipConn
+    tab:AddButton({
+        Title="Toggle NoClip",
+        Description="Enable/Disable NoClip",
+        Callback=function()
+            noclipEnabled = not noclipEnabled
+            local char = LocalPlayer.Character
+            if noclipEnabled then
+                notify("NoClip","Enabled",2)
+                noclipConn = RunService.Stepped:Connect(function()
+                    if not char then return end
+                    for _,part in ipairs(char:GetChildren()) do if part:IsA("BasePart") then part.CanCollide=false end end
+                end)
+            else
+                notify("NoClip","Disabled",2)
+                if noclipConn then noclipConn:Disconnect() end
+                if char then for _,part in ipairs(char:GetChildren()) do if part:IsA("BasePart") then part.CanCollide=true end end end
+            end
+        end
+    })
+
+    -- Kill Aura
+    local KillAuraEnabled = false
+    local attackRange = 30
+    local attackCooldown = 0.5
+    local lastAttackTimes = {}
+    local useWhitelist = true
+    local attackAllAtOnce = false
+    local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword"}
+    local allTargets = {"Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite","Arctic Fox","Black Robe Cultists","Red Robe Cultists"}
+    local targetWhitelist = {}
+    for _, n in ipairs(allTargets) do targetWhitelist[n] = true end
+
+    local function findBestWeapon()
+        local inv = LocalPlayer:FindFirstChild("Inventory")
+        if not inv then return nil end
+        for _, w in ipairs(weaponPriority) do
+            local f = inv:FindFirstChild(w)
+            if f then return f end
+        end
+        return nil
+    end
+
+    local function isTargetValid(target,hrp)
+        if not target or not target.PrimaryPart then return false end
+        if useWhitelist and not targetWhitelist[target.Name] then return false end
+        return (target.PrimaryPart.Position-hrp.Position).Magnitude<=attackRange
+    end
+
+    local RemoteToolDamage = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("ToolDamageObject")
+
+    tab:AddSlider("AttackRange",{Title="Attack Range",Min=5,Max=100,Default=attackRange,Rounding=0,Suffix=" studs",Callback=function(v) attackRange=v end})
+    tab:AddSlider("AttackCooldown",{Title="Attack Cooldown",Min=0.1,Max=2,Default=attackCooldown,Rounding=2,Suffix=" sec",Callback=function(v) attackCooldown=v end})
+    tab:AddToggle("UseWhitelist",{Title="Use Target Whitelist",Default=useWhitelist,Callback=function(v) useWhitelist=v end})
+    tab:AddToggle("AttackAllAtOnce",{Title="Attack All Targets At Once",Default=attackAllAtOnce,Callback=function(v) attackAllAtOnce=v end})
+
+    tab:AddToggle("KillAura",{Title="Kill Aura",Default=false,Callback=function(enabled)
+        KillAuraEnabled=enabled
+        if enabled then
+            notify("Kill Aura","Enabled",2)
+            task.spawn(function()
+                while KillAuraEnabled do
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if not hrp then task.wait(0.5) continue end
+                    local weapon=findBestWeapon()
+                    if not weapon then task.wait(1) continue end
+                    local charactersFolder=Workspace:FindFirstChild("Characters")
+                    if not charactersFolder then task.wait(0.5) continue end
+                    if attackAllAtOnce then
+                        for _,tgt in ipairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(tgt,hrp) then
+                                pcall(function() RemoteToolDamage:InvokeServer(tgt,weapon,"3_"..tostring(weapon:GetAttribute("Owner") or ""),tgt.PrimaryPart.CFrame) end)
+                            end
+                        end
+                        task.wait(attackCooldown)
+                    else
+                        for _,tgt in ipairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(tgt,hrp) then
+                                local now=tick()
+                                if not lastAttackTimes[tgt] or (now-lastAttackTimes[tgt])>=attackCooldown then
+                                    pcall(function() RemoteToolDamage:InvokeServer(tgt,weapon,"3_"..tostring(weapon:GetAttribute("Owner") or ""),tgt.PrimaryPart.CFrame) end)
+                                    lastAttackTimes[tgt]=now
+                                end
+                            end
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        else
+            notify("Kill Aura","Disabled",2)
+            lastAttackTimes={}
+        end
+    end})
+end
+
+-- ================= Teleport Tab (Example) =================
+do
+    local tab = Tabs.Teleport
+    tab:AddSection("Teleportation")
+    local locations = {["Spawn"]=CFrame.new(0,5,0),["Camp"]=CFrame.new(12,4,10)}
+    tab:AddDropdown({
+        Title="Select Location",
+        Description="Choose where to teleport",
+        Options={"Spawn","Camp"},
+        Default="Spawn",
+        Callback=function(selected)
+            local char=LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame=locations[selected]
+                Fluent:Notify({Title="Teleport",Content="Teleported to "..selected.."!",Duration=2})
+            end
+        end
+    })
+end
+
+-- ================= Visuals Tab (Example) =================
+do
+    local tab = Tabs.Visuals
+    tab:AddSection("ESP Settings")
+    tab:AddToggle({Title="Enable Player ESP",Default=false,Callback=function(state) notify("ESP","Player ESP "..(state and "Enabled" or "Disabled"),2) end})
+    tab:AddToggle({Title="Enable World ESP",Default=false,Callback=function(state) notify("ESP","World ESP "..(state and "Enabled" or "Disabled"),2) end})
+end
+
+-- ================= Save & Interface Managers =================
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
-
--- Ignore theme settings in configs
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
-
--- Folders for configs
 InterfaceManager:SetFolder("ShadowCore")
 SaveManager:SetFolder("ShadowCore/specific-game")
-
--- Build sections in Settings tab
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
+SaveManager:LoadAutoloadConfig()
 
--- ================= Select Default Tab =================
+-- ================= Finish =================
 Window:SelectTab(1)
-
-Fluent:Notify({
-    Title = "ShadowCore",
-    Content = "GUI loaded successfully. Ready to add features!",
-    Duration = 5
-})
-
+Fluent:Notify({Title="ShadowCore",Content="Script Loaded!",Duration=5})
