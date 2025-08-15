@@ -5,7 +5,6 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 -- ======================= GUI Setup =======================
 local guiWidth, guiHeight = 460, 300
-
 local Window = Fluent:CreateWindow({
     Title = "ShadowCore " .. Fluent.Version,
     SubTitle = "by Sin",
@@ -15,7 +14,6 @@ local Window = Fluent:CreateWindow({
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
-
 local Options = Fluent.Options
 
 -- ======================= Tabs =======================
@@ -27,41 +25,19 @@ local Tabs = {
     BringStuff = Window:AddTab({ Title = "Bring Stuff", Icon = "hand" }),
     LocalPlayer = Window:AddTab({ Title = "Local Player", Icon = "user" }),
     Teleport = Window:AddTab({ Title = "Teleport", Icon = "arrow-up-right" }),
+    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- ======================= Main Tab Elements =======================
-do
-    Tabs.Main:AddParagraph({
-        Title = "Welcome",
-        Content = "ShadowCore GUI by Sin.\nUse the tabs to access features!"
-    })
+-- ======================= Main Tab =======================
+Tabs.Main:AddParagraph({Title = "Welcome", Content = "ShadowCore GUI by Sin.\nUse the tabs to access features!"})
+Fluent:Notify({ Title = "Notification", Content = "Welcome to ShadowCore!", Duration = 5 })
 
-    Fluent:Notify({
-        Title = "Notification",
-        Content = "Welcome to ShadowCore!",
-        Duration = 5
-    })
-end
+-- ======================= Automation Tab =======================
+Tabs.Automation:AddParagraph({Title = "Automation", Content = "Here you can enable general automation features."})
 
--- ======================= Automation Tab Elements =======================
-do
-    Tabs.Automation:AddParagraph({
-        Title = "Automation",
-        Content = "Here you can enable general automation features."
-    })
-end
-
--- ======================= Fun Tab Elements =======================
-do
-    Tabs.Fun:AddButton({
-        Title = "Fun Button",
-        Description = "Just for fun!",
-        Callback = function()
-            print("Fun feature clicked!")
-        end
-    })
-end
+-- ======================= Fun Tab =======================
+Tabs.Fun:AddButton({Title = "Fun Button", Description = "Just for fun!", Callback = function() print("Fun feature clicked!") end})
 
 -- ======================= Auto Bandage Tab =======================
 do
@@ -89,23 +65,21 @@ do
 end
 
 -- ======================= Bring Stuff Tab =======================
-do
-    Tabs.BringStuff:AddButton({
-        Title = "Bring Stuff",
-        Description = "Bring all items to your location",
-        Callback = function()
-            local player = game.Players.LocalPlayer
-            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and obj.Name:match("Item") then
-                    obj.CFrame = root.CFrame + Vector3.new(0,5,0)
-                    print("Brought object:", obj.Name)
-                end
+Tabs.BringStuff:AddButton({
+    Title = "Bring Stuff",
+    Description = "Bring all items to your location",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name:match("Item") then
+                obj.CFrame = root.CFrame + Vector3.new(0,5,0)
+                print("Brought object:", obj.Name)
             end
         end
-    })
-end
+    end
+})
 
 -- ======================= Local Player Tab =======================
 do
@@ -130,7 +104,6 @@ do
             end
         end
     })
-
     LocalPlayer.CharacterAdded:Connect(function(char)
         char:WaitForChild("Humanoid").WalkSpeed = SpeedValue
     end)
@@ -141,11 +114,8 @@ do
         Title = "Infinite Jump",
         Description = "Jump as many times as you want",
         Default = false,
-        Callback = function(State)
-            InfiniteJumpEnabled = State
-        end
+        Callback = function(State) InfiniteJumpEnabled = State end
     })
-
     UserInputService.JumpRequest:Connect(function()
         if InfiniteJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
@@ -181,16 +151,12 @@ do
     })
 
     -- Reset Character
-    Tabs.LocalPlayer:AddButton({
-        Title = "Reset Character",
-        Description = "Resets your character",
-        Callback = function()
-            if LocalPlayer.Character then
-                LocalPlayer.Character:BreakJoints()
-                print("Character reset!")
-            end
+    Tabs.LocalPlayer:AddButton({Title = "Reset Character", Description = "Resets your character", Callback = function()
+        if LocalPlayer.Character then
+            LocalPlayer.Character:BreakJoints()
+            print("Character reset!")
         end
-    })
+    end})
 end
 
 -- ======================= Teleport Tab =======================
@@ -214,7 +180,6 @@ do
             end
         end
     })
-
     Tabs.Teleport:AddKeybind("TeleportKey", {
         Title = "Teleport Key",
         Mode = "Toggle",
@@ -228,8 +193,6 @@ do
             end
         end
     })
-
-    -- Preset teleport to 9, 4, -1
     Tabs.Teleport:AddButton({
         Title = "Teleport to Camp",
         Description = "Instantly teleport to coordinates 9, 4, -1",
@@ -244,6 +207,107 @@ do
             end
         end
     })
+end
+
+-- ======================= Visuals Tab - ESP Players =======================
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local PlayerESPEnabled = false
+    local ESPPlayers = {}
+
+    local VisualsTab = Tabs.Visuals
+    VisualsTab:AddToggle("PlayerESP", {
+        Title = "Enable Player ESP",
+        Description = "Highlights players with health bar and distance",
+        Default = false,
+        Callback = function(state) PlayerESPEnabled = state
+            if not state then
+                for _, data in pairs(ESPPlayers) do
+                    if data.Billboard then data.Billboard:Destroy() end
+                end
+                ESPPlayers = {}
+            end
+        end
+    })
+
+    local function CreateESPForPlayer(plr)
+        if ESPPlayers[plr] then return end
+        if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = plr.Character.HumanoidRootPart
+        local bb = Instance.new("BillboardGui")
+        bb.Name = "SC_PlayerESP"
+        bb.Adornee = hrp
+        bb.Size = UDim2.new(0,120,0,36)
+        bb.StudsOffset = Vector3.new(0,2,0)
+        bb.AlwaysOnTop = true
+        bb.Parent = hrp
+
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Size = UDim2.new(1,0,0.3,0)
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        nameLabel.TextScaled = true
+        nameLabel.Text = plr.Name
+        nameLabel.Parent = bb
+
+        local healthBar = Instance.new("Frame")
+        healthBar.BackgroundColor3 = Color3.fromRGB(173, 216, 230) -- Light blue
+        healthBar.Size = UDim2.new(1,0,0.2,0)
+        healthBar.Position = UDim2.new(0,0,0.3,0)
+        healthBar.Parent = bb
+
+        local distLabel = Instance.new("TextLabel")
+        distLabel.BackgroundTransparency = 1
+        distLabel.Size = UDim2.new(1,0,0.3,0)
+        distLabel.Position = UDim2.new(0,0,0.5,0)
+        distLabel.Font = Enum.Font.Gotham
+        distLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        distLabel.TextScaled = true
+        distLabel.Text = "Distance: 0"
+        distLabel.Parent = bb
+
+        ESPPlayers[plr] = {Billboard = bb, HealthBar = healthBar, DistanceLabel = distLabel}
+    end
+
+    RunService.RenderStepped:Connect(function()
+        if not PlayerESPEnabled then return end
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+                CreateESPForPlayer(plr)
+                local hum = plr.Character.Humanoid
+                local data = ESPPlayers[plr]
+                if data then
+                    -- Update Health bar size
+                    local healthRatio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                    data.HealthBar.Size = UDim2.new(healthRatio,0,0.2,0)
+                    -- Update Health bar color (green → yellow → red)
+                    if healthRatio > 0.6 then
+                        data.HealthBar.BackgroundColor3 = Color3.fromRGB(0,255,0)
+                    elseif healthRatio > 0.3 then
+                        data.HealthBar.BackgroundColor3 = Color3.fromRGB(255,255,0)
+                    else
+                        data.HealthBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+                    end
+                    -- Update Distance label
+                    local dist = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+                    data.DistanceLabel.Text = ("Distance: %.1f"):format(dist)
+                    if dist < 20 then
+                        data.DistanceLabel.TextColor3 = Color3.fromRGB(0,255,0)
+                    elseif dist < 50 then
+                        data.DistanceLabel.TextColor3 = Color3.fromRGB(255,255,0)
+                    else
+                        data.DistanceLabel.TextColor3 = Color3.fromRGB(255,0,0)
+                    end
+                end
+            end
+        end
+    end)
 end
 
 -- ======================= Settings Tab =======================
@@ -262,3 +326,4 @@ end
 Window:SelectTab(1)
 Fluent:Notify({ Title = "ShadowCore", Content = "The script has been loaded.", Duration = 8 })
 SaveManager:LoadAutoloadConfig()
+
