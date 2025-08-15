@@ -4,7 +4,7 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 -- ======================= GUI Setup =======================
-local guiWidth, guiHeight = 300, 500
+local guiWidth, guiHeight = 460, 300
 
 local Window = Fluent:CreateWindow({
     Title = "ShadowCore " .. Fluent.Version,
