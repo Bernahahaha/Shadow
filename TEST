@@ -18,56 +18,132 @@ local Options = Fluent.Options
 
 -- ======================= Tabs =======================
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-   Automation = Window:AddTab({ Title = "Automation", Icon = "cog" }),
-    Fun = Window:AddTab({ Title = "Fun", Icon = "smile" }),
+    Main        = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Automation  = Window:AddTab({ Title = "Automation", Icon = "cog" }),
+    Fun         = Window:AddTab({ Title = "Fun", Icon = "smile" }),
     AutoBandage = Window:AddTab({ Title = "Auto Bandage", Icon = "heart" }),
-    BringStuff = Window:AddTab({ Title = "Bring Stuff", Icon = "hand" }),
+    BringStuff  = Window:AddTab({ Title = "Bring Stuff", Icon = "hand" }),
     LocalPlayer = Window:AddTab({ Title = "Local Player", Icon = "user" }),
-    Teleport = Window:AddTab({ Title = "Teleport", Icon = "arrow-up-right" }),
-    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    Teleport    = Window:AddTab({ Title = "Teleport", Icon = "arrow-up-right" }),
+    Visuals     = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Settings    = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- ======================= Main Tab =======================
-Tabs.Main:AddParagraph({
-    Title = "Credits",
-    Content = "GUI made by Sin\nRoblox: MIJ_LIM2021 Sin\nDiscord: https://discord.gg/vBEFRWTP"
-})
+-----------------------------------------------------------------
+-- ======================= Main Tab ============================
+-----------------------------------------------------------------
+do
+    -- Credits
+    Tabs.Main:AddParagraph({
+        Title = "Credits",
+        Content = "GUI made by Sin\nRoblox: MIJ_LIM2021 Sin\nDiscord: https://discord.gg/vBEFRWTP"
+    })
 
-Tabs.Main:AddButton({
-    Title = "Join My Discord",
-    Description = "Click to join my Discord server",
-    Callback = function()
-        setclipboard("https://discord.gg/vBEFRWTP")
-        Fluent:Notify({
-            Title = "Discord Link Copied",
-            Content = "Invite link copied to clipboard!",
-            Duration = 5
-        })
-    end
-})
+    -- Quick Actions
+    Tabs.Main:AddSection("Quick Actions")
+    Tabs.Main:AddButton({
+        Title = "Rejoin Server",
+        Description = "Leave and rejoin this server instantly.",
+        Callback = function()
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
+        end
+    })
+    Tabs.Main:AddButton({
+        Title = "Copy Script",
+        Description = "Copies this script link to your clipboard.",
+        Callback = function()
+            setclipboard("https://pastebin.com/raw/YourScriptLinkHere") -- Change link to your script!
+            Fluent:Notify({
+                Title = "Script Link Copied",
+                Content = "Script URL copied to clipboard!",
+                Duration = 4
+            })
+        end
+    })
+    Tabs.Main:AddButton({
+        Title = "Close GUI",
+        Description = "Closes the ShadowCore GUI.",
+        Callback = function()
+            if Window and Window.Hide then Window:Hide() end
+        end
+    })
 
--- ======================= Automation Tab =======================
-Tabs.Automation:AddParagraph({Title = "Automation", Content = "Here you can enable general automation features."})
--- === Kill Aura (Advanced) inside Automation Tab ===
+    -- Quick Settings
+    Tabs.Main:AddSection("Quick Settings")
+    Tabs.Main:AddToggle("ThemeToggle", {
+        Title = "Dark Theme",
+        Default = true,
+        Callback = function(state)
+            if Fluent and Fluent.SetTheme then
+                Fluent:SetTheme(state and "Dark" or "Light")
+                Fluent:Notify({
+                    Title = "Theme Changed",
+                    Content = "Theme set to " .. (state and "Dark" or "Light"),
+                    Duration = 3
+                })
+            end
+        end
+    })
 
+    -- Social Links
+    Tabs.Main:AddSection("Socials")
+    Tabs.Main:AddButton({
+        Title = "Facebook",
+        Description = "Go to my Facebook If you encountered a bug",
+        Callback = function()
+            setclipboard("https://www.facebook.com/mij.barbarin.5") -- Change to your channel!
+            Fluent:Notify({Title = "Copied", Content = "Facebook link copied!", Duration = 3})
+        end
+    })
+    Tabs.Main:AddButton({
+        Title = "Facebook",
+        Description = "TRUSTED SELLER Fb Account",
+        Callback = function()
+            setclipboard("https://www.facebook.com/clydegarcia11#") -- Change to your profile!
+            Fluent:Notify({Title = "Copied", Content = "Facebook link copied!", Duration = 3})
+        end
+    })
+
+    -- Info / Version
+    Tabs.Main:AddSection("ShadowCore | by Sin – Script Usage Info")
+    Tabs.Main:AddParagraph({
+        Title = "1.1.0",
+        Content = "ShadowCore is a powerful Script Used to enchance your performance" .. (Fluent.Version or "?")
+    })
+    Tabs.Main:AddParagraph({
+        Title = "Last Loaded",
+        Content = "Loaded at: " .. os.date("%Y-%m-%d %H:%M:%S")
+    })
+
+    -- FAQ / Help
+    Tabs.Main:AddSection("Help / FAQ")
+    Tabs.Main:AddParagraph({
+        Title = "How to use?",
+        Content = "This script is only working in 99 nights in the Forest."
+    })
+    Tabs.Main:AddParagraph({
+        Title = "Bring Stuff Not Working?",
+        Content = "The Bring Stuff is not working. I'm still working on it."
+    })
+end
+
+-----------------------------------------------------------------
+-- ======================= Automation Tab ======================
+-----------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Kill Aura config/state
+---------------------------- Kill Aura --------------------------
 local KillAuraEnabled = false
-local attackRange = 300 -- default range
+local attackRange = 300
 local attackCooldown = 0.5
 local lastAttackTimes = {}
 local useWhitelist = true
 local attackAllAtOnce = false
 local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword","Katana"}
-
--- Target mobs
 local allTargets = {
     "Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite",
     "Arctic Fox","Black Robe Cultist","Red Robe Cultist","Crossbow Cultist"
@@ -106,41 +182,31 @@ local function isTargetValid(target, hrp)
     return dist <= attackRange
 end
 
--- === GUI Controls inside Automation Tab ===
 Tabs.Automation:AddSection("Kill Aura (Advanced)")
-
 Tabs.Automation:AddSlider("KA_Range", {
     Title = "Attack Range",
     Description = "Distance to attack mobs",
     Default = attackRange,
-    Min = 50,
-    Max = 500,
-    Rounding = 0,
+    Min = 50, Max = 500, Rounding = 0,
     Callback = function(v) attackRange = v end
 })
-
 Tabs.Automation:AddSlider("KA_Cooldown", {
     Title = "Attack Cooldown",
     Description = "Delay between hits",
     Default = attackCooldown,
-    Min = 0.1,
-    Max = 2,
-    Rounding = 2,
+    Min = 0.1, Max = 2, Rounding = 2,
     Callback = function(v) attackCooldown = v end
 })
-
 Tabs.Automation:AddToggle("KA_Whitelist", {
     Title = "Use Target Whitelist",
     Default = useWhitelist,
     Callback = function(v) useWhitelist = v end
 })
-
 Tabs.Automation:AddToggle("KA_AllAtOnce", {
     Title = "Attack All Targets At Once",
     Default = attackAllAtOnce,
     Callback = function(v) attackAllAtOnce = v end
 })
-
 Tabs.Automation:AddDropdown("KA_WeaponPriority", {
     Title = "Weapon Priority (Display)",
     Values = weaponPriority,
@@ -150,7 +216,6 @@ Tabs.Automation:AddDropdown("KA_WeaponPriority", {
         notify("Kill Aura", "Priority head set to: "..tostring(val), 3)
     end
 })
-
 Tabs.Automation:AddToggle("KA_Enabled", {
     Title = "Kill Aura (Advanced)",
     Default = false,
@@ -164,12 +229,8 @@ Tabs.Automation:AddToggle("KA_Enabled", {
                     local hrp = getHRP()
                     if not hrp then task.wait(0.5) continue end
                     local weapon = findBestWeapon()
-                    if not weapon or not RemoteToolDamage then
-                        task.wait(1)
-                        continue
-                    end
+                    if not weapon or not RemoteToolDamage then task.wait(1) continue end
                     local ownerId = weapon:GetAttribute("Owner") or ""
-
                     local charactersFolder = Workspace:FindFirstChild("Characters")
                     if not charactersFolder then task.wait(0.5) continue end
 
@@ -208,69 +269,37 @@ Tabs.Automation:AddToggle("KA_Enabled", {
         end
     end
 })
--- === Gluttony (Auto Consume Dropped Food) ===
-Tabs.Automation:AddSection("Gluttony")
 
-local GluttonyEnabled = false
-local consumeRange = 50 -- default
-local validFoods = {"Morsel","Steak","Carrot","Berry","Cooked Morsel","Cooked Steak"}
+------------------------ Gluttony (Auto Eat) ---------------------
 
-local function isFood(item)
-    for _, name in ipairs(validFoods) do
-        if item.Name == name then return true end
-    end
-    return false
-end
 
-local function getHRP()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        return char.HumanoidRootPart
-    end
-    return nil
-end
 
-Tabs.Automation:AddSlider("Gluttony_Range", {
-    Title = "Consume Range",
-    Description = "Max distance to auto eat dropped food",
-    Default = consumeRange,
-    Min = 10,
-    Max = 300, -- max range set to 300
-    Rounding = 0,
-    Callback = function(v) consumeRange = v end
-})
-
-Tabs.Automation:AddToggle("Gluttony_Enabled", {
-    Title = "Gluttony",
-    Default = false,
-    Callback = function(enabled)
-        GluttonyEnabled = enabled
-        if enabled then
-            local RemoteConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
-            task.spawn(function()
-                while GluttonyEnabled do
-                    local hrp = getHRP()
-                    if hrp and Workspace:FindFirstChild("Items") then
-                        for _, drop in ipairs(Workspace.Items:GetChildren()) do
-                            if isFood(drop) and drop.PrimaryPart then
-                                local dist = (drop.PrimaryPart.Position - hrp.Position).Magnitude
-                                if dist <= consumeRange then
-                                    local args = {drop}
-                                    pcall(function()
-                                        RemoteConsume:InvokeServer(unpack(args))
-                                    end)
-                                    task.wait(0.5) -- prevent spam
-                                end
-                            end
-                        end
-                    end
-                    task.wait(1)
-                end
-            end)
+------------------------ Bring Log Feature -----------------------
+Tabs.Automation:AddButton({
+    Title = "Auto Log",
+    Description = "Brings all Log models to your position",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        local count = 0
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name == "Log" then
+                obj.CFrame = root.CFrame + Vector3.new(0,5,0)
+                count = count + 1
+            end
         end
+        Fluent:Notify({
+            Title = "Auto Log",
+            Content = "Brought " .. count .. " log(s) to your location!",
+            Duration = 4
+        })
     end
 })
--- ======================= Fun Tab (Merged) =======================
+
+-----------------------------------------------------------------
+-- ======================= Fun Tab =============================
+-----------------------------------------------------------------
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -548,7 +577,9 @@ do
     })
 end
 
--- ======================= Auto Bandage Tab =======================
+-----------------------------------------------------------------
+-- ======================= Auto Bandage Tab =====================
+-----------------------------------------------------------------
 do
     local AutoBandage = Tabs.AutoBandage:AddToggle("AutoBandage", {
         Title = "Auto Bandage",
@@ -572,25 +603,328 @@ do
         end)
     end)
 end
+-- ======================= Gluttony (Auto Consume Dropped Food) - Auto Bandage Tab =======================
+local GluttonyEnabled = false
+local consumeRange = 50
+local validFoods = {"Morsel","Steak","Carrot","Berry","Cooked Morsel","Cooked Steak"}
 
--- ======================= Bring Stuff Tab =======================
-Tabs.BringStuff:AddButton({
-    Title = "Bring Stuff",
-    Description = "Bring all items to your location",
-    Callback = function()
-        local player = game.Players.LocalPlayer
-        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Name:match("Item") then
-                obj.CFrame = root.CFrame + Vector3.new(0,5,0)
-                print("Brought object:", obj.Name)
-            end
+local function isFood(item)
+    for _, name in ipairs(validFoods) do
+        if item.Name == name then return true end
+    end
+    return false
+end
+
+Tabs.AutoBandage:AddSection("Gluttony")
+Tabs.AutoBandage:AddSlider("Gluttony_Range", {
+    Title = "Consume Range",
+    Description = "Max distance to auto eat dropped food",
+    Default = consumeRange, Min = 10, Max = 300,
+    Rounding = 0,
+    Callback = function(v) consumeRange = v end
+})
+Tabs.AutoBandage:AddToggle("Gluttony_Enabled", {
+    Title = "Gluttony",
+    Default = false,
+    Callback = function(enabled)
+        GluttonyEnabled = enabled
+        if enabled then
+            local RemoteConsume = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RequestConsumeItem")
+            task.spawn(function()
+                while GluttonyEnabled do
+                    local hrp = getHRP()
+                    if hrp and Workspace:FindFirstChild("Items") then
+                        for _, drop in ipairs(Workspace.Items:GetChildren()) do
+                            if isFood(drop) and drop.PrimaryPart then
+                                local dist = (drop.PrimaryPart.Position - hrp.Position).Magnitude
+                                if dist <= consumeRange then
+                                    local args = {drop}
+                                    pcall(function()
+                                        RemoteConsume:InvokeServer(unpack(args))
+                                    end)
+                                    task.wait(0.5)
+                                end
+                            end
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+-----------------------------------------------------------------
+-- ======================= Bring Stuff Tab ======================
+-----------------------------------------------------------------
+local BringStuffTab = Tabs and Tabs.BringStuff or nil
+if not BringStuffTab then
+    warn("BringStuffTab not found! Make sure Tabs.BringStuff exists before loading this script.")
+    return
+end
+
+-- ================= Lists =================
+local itemsList = {
+    "Log", "Scraps", "Bolt", "Sheet Metal", "UFO", "Junk",
+    "Broken Fan", "Broken Radio", "UFO Component", "Tyre",
+    "Broken Microwave", "Metal Chair", "Old Car Engine",
+    "Cultist Experiment", "Washing Machine", "Cultist Prototype",
+    "UFO Scrap", "Fuel", "Coal", "Water", "Food", "Morsel",
+    "Steak", "Bandage", "MedKit", "Berry", "Cake",
+    "Wolf Pelt", "Alpha Wolf Pelt", "Good Sac", "Strong Axe", "Good Axe",
+    "Leather Body", "Iron Body", "Thorn Body"
+}
+
+local treesList = {
+    "Small Tree", "Big Tree"
+}
+
+local selectedItems = {}
+local bringRange = 1000
+
+-- ================= UI Sections =================
+BringStuffTab:AddSection("Items")
+
+BringStuffTab:AddSlider("BringRangeSlider", {
+    Title = "Bring Range",
+    Description = "Maximum distance to bring items/trees",
+    Default = 1000,
+    Min = 50,
+    Max = 5000,
+    Rounding = 0,
+    Callback = function(val)
+        bringRange = val
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({
+                Title = "Bring Range",
+                Content = "Set bring range to: " .. tostring(val),
+                Duration = 2
+            })
         end
     end
 })
 
--- ======================= Local Player Tab =======================
+BringStuffTab:AddDropdown("ItemsToBring", {
+    Title = "Items To Bring",
+    Values = itemsList,
+    Multi = true,
+    Default = {},
+    Callback = function(selected)
+        selectedItems = selected
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({
+                Title = "Items Selected",
+                Content = "Selected items: " .. table.concat(selected, ", "),
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- ================= Helper Functions =================
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local confirmCatchRemote = ReplicatedStorage:WaitForChild("RemoteEvents"):FindFirstChild("ConfirmCatchItem")
+
+local function confirmCatch(obj)
+    if not confirmCatchRemote or not obj then return end
+    pcall(function()
+        confirmCatchRemote:InvokeServer(obj) -- notify server item is caught
+    end)
+end
+
+local function getRoot()
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        return player.Character.HumanoidRootPart
+    end
+    return nil
+end
+
+local function isWithinRange(obj, root, range)
+    if not obj or not root then return false end
+    local pos = obj.Position or (obj:IsA("Model") and obj.PrimaryPart and obj.PrimaryPart.Position)
+    if not pos then return false end
+    return (pos - root.Position).Magnitude <= range
+end
+
+local function dropFromInventory(itemName)
+    local remote = ReplicatedStorage:WaitForChild("RemoteEvents"):FindFirstChild("RequestDropItem")
+    if remote then
+        pcall(function()
+            remote:InvokeServer(itemName)
+        end)
+        return true
+    end
+    return false
+end
+
+-- =========== SAFE DROP! ===========
+local function dropNearPlayer(obj, root)
+    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+    if not part or not root then return end
+    -- Drop 8-20 studs away from player, random direction, safe height
+    local safeDistance = 8 + math.random(4, 12)
+    local angle = math.random() * math.pi * 2
+    local offset = Vector3.new(math.cos(angle) * safeDistance, 3, math.sin(angle) * safeDistance)
+    part.CFrame = root.CFrame + offset
+end
+
+local function simulatePickup(obj, root)
+    if not root or not obj then return end
+    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+    if not part then return end
+    firetouchinterest(root, part, 0)
+    firetouchinterest(root, part, 1)
+end
+
+local function teleportTreeNearPlayer(obj, root, treeIndex)
+    local treePart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+    if not treePart then return end
+    local angle = (treeIndex or 1) * (math.pi * 2 / 6)
+    local radius = 10 + ((treeIndex or 1) * 5)
+    local offset = Vector3.new(math.cos(angle) * radius, 10, math.sin(angle) * radius)
+    treePart.CFrame = root.CFrame + offset
+end
+
+-- ================= Buttons =================
+
+BringStuffTab:AddButton({
+    Title = "Bring Selected Items",
+    Description = "Bring chosen items to your location (safe drop + confirm)",
+    Callback = function()
+        local root = getRoot()
+        if not root or #selectedItems == 0 then
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({
+                    Title = "Bring Selected Items",
+                    Content = "No items selected or player not ready.",
+                    Duration = 3
+                })
+            end
+            return
+        end
+
+        local dropped = 0
+        -- Drop from inventory via Remote
+        for _, itemName in pairs(selectedItems) do
+            if dropFromInventory(itemName) then
+                dropped = dropped + 1
+            end
+        end
+
+        -- Bring items from Workspace.Items
+        local count = 0
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if itemsFolder then
+            for _, obj in pairs(itemsFolder:GetChildren()) do
+                if table.find(selectedItems, obj.Name) and isWithinRange(obj, root, bringRange) then
+                    dropNearPlayer(obj, root)
+                    simulatePickup(obj, root)
+                    confirmCatch(obj) -- confirm to server
+                    count = count + 1
+                end
+            end
+        end
+
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({
+                Title = "Bring Selected Items",
+                Content = ("Dropped %d from inventory, moved %d in world (within %d studs)!"):format(dropped, count, bringRange),
+                Duration = 4
+            })
+        end
+    end
+})
+
+BringStuffTab:AddButton({
+    Title = "Bring All Items",
+    Description = "Bring all items to your location (safe drop + confirm)",
+    Callback = function()
+        local root = getRoot()
+        if not root then
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({
+                    Title = "Bring All Items",
+                    Content = "Player not ready.",
+                    Duration = 3
+                })
+            end
+            return
+        end
+
+        local dropped = 0
+        -- Drop all items from inventory via Remote
+        for _, itemName in pairs(itemsList) do
+            if dropFromInventory(itemName) then
+                dropped = dropped + 1
+            end
+        end
+
+        -- Bring all items from Workspace.Items
+        local count = 0
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if itemsFolder then
+            for _, obj in pairs(itemsFolder:GetChildren()) do
+                if table.find(itemsList, obj.Name) and isWithinRange(obj, root, bringRange) then
+                    dropNearPlayer(obj, root)
+                    simulatePickup(obj, root)
+                    confirmCatch(obj) -- confirm to server
+                    count = count + 1
+                end
+            end
+        end
+
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({
+                Title = "Bring All Items",
+                Content = ("Dropped %d from inventory, moved %d in world (within %d studs)!"):format(dropped, count, bringRange),
+                Duration = 4
+            })
+        end
+    end
+})
+
+BringStuffTab:AddSection("Others")
+
+BringStuffTab:AddButton({
+    Title = "Bring All Trees",
+    Description = "Teleports all tree models close to your location (safe teleport)",
+    Callback = function()
+        local root = getRoot()
+        if not root then
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({
+                    Title = "Bring All Trees",
+                    Content = "Player not ready.",
+                    Duration = 3
+                })
+            end
+            return
+        end
+        local itemsFolder = workspace:FindFirstChild("Items")
+        local count = 0
+        local treeIdx = 0
+        if itemsFolder then
+            for _, obj in pairs(itemsFolder:GetChildren()) do
+                if table.find(treesList, obj.Name) and isWithinRange(obj, root, bringRange) then
+                    treeIdx = treeIdx + 1
+                    teleportTreeNearPlayer(obj, root, treeIdx)
+                    count = count + 1
+                end
+            end
+        end
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({
+                Title = "Bring All Trees",
+                Content = "Teleported " .. count .. " tree(s) near you (within "..bringRange.." studs)!",
+                Duration = 4
+            })
+        end
+    end
+})
+
+-----------------------------------------------------------------
+-- ======================= Local Player Tab =====================
+-----------------------------------------------------------------
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -657,8 +991,9 @@ do
         if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() print("Character reset!") end
     end})
 end
-
--- ======================= Teleport Tab =======================
+-----------------------------------------------------------------
+-- ======================= Teleport Tab =========================
+-----------------------------------------------------------------
 do
     Tabs.Teleport:AddInput("TeleportInput", {
         Title = "Teleport To (x,y,z)",
@@ -780,7 +1115,10 @@ Tabs.Teleport:AddButton({
         end
     end
 })
--- ======================= Visuals Tab - ESP Players =======================
+
+-----------------------------------------------------------------
+-- ======================= Visuals Tab ==========================
+-----------------------------------------------------------------
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -879,8 +1217,58 @@ do
         end
     end)
 end
+-- ESP Chest (Simple)
+local espChestEnabled = false
+local chestNames = {"Item Chest","Item Chest1","Item Chest2","Item Chest3","Item Chest 4","Item Chest5","Item Chest6"}
+local drawnLabels = {}
 
--- ======================= Settings Tab =======================
+local function highlightChests()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if table.find(chestNames, obj.Name) and obj:IsA("Model") and not drawnLabels[obj] then
+            local bill = Instance.new("BillboardGui")
+            bill.Name = "ChestESP"
+            bill.Adornee = obj
+            bill.Size = UDim2.new(0, 100, 0, 40)
+            bill.StudsOffset = Vector3.new(0, 2, 0)
+            bill.AlwaysOnTop = true
+            bill.Parent = obj
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.BackgroundTransparency = 1
+            label.Text = obj.Name
+            label.TextColor3 = Color3.fromRGB(255, 221, 40)
+            label.Font = Enum.Font.GothamBold
+            label.TextStrokeTransparency = 0.2
+            label.TextScaled = true
+            label.Parent = bill
+            drawnLabels[obj] = bill
+        end
+    end
+end
+
+local function removeChestsESP()
+    for obj, gui in pairs(drawnLabels) do
+        if gui and gui.Parent then gui:Destroy() end
+    end
+    drawnLabels = {}
+end
+
+Tabs.Visuals:AddToggle("ESPChest", {
+    Title = "Chest ESP (Simple)",
+    Description = "Highlights all Item Chest models",
+    Default = false,
+    Callback = function(val)
+        espChestEnabled = val
+        if not val then removeChestsESP() end
+    end
+})
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if espChestEnabled then highlightChests() end
+end)
+-----------------------------------------------------------------
+-- ======================= Settings Tab =========================
+-----------------------------------------------------------------
 do
     SaveManager:SetLibrary(Fluent)
     InterfaceManager:SetLibrary(Fluent)
@@ -892,7 +1280,9 @@ do
     SaveManager:BuildConfigSection(Tabs.Settings)
 end
 
--- ======================= Advanced Minimize Button (Draggable / Toggle Window) =======================
+-----------------------------------------------------------------
+-- ========== Advanced Minimize Button (Draggable, Toggle) ======
+-----------------------------------------------------------------
 do
     local CoreGui = game:GetService("CoreGui")
     local UserInputService = game:GetService("UserInputService")
@@ -1084,8 +1474,9 @@ do
         end
     end)
 end
-
+-----------------------------------------------------------------
 -- ======================= Initialize GUI =======================
+-----------------------------------------------------------------
 Window:SelectTab(1)
 Fluent:Notify({ Title = "ShadowCore", Content = "The script has been loaded.", Duration = 8 })
 SaveManager:LoadAutoloadConfig()
