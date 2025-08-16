@@ -52,7 +52,7 @@ do
         Title = "Copy Script",
         Description = "Copies this script link to your clipboard.",
         Callback = function()
-            setclipboard("https://pastebin.com/raw/YourScriptLinkHere") -- Change link to your script!
+            setclipboard("loadstring(game:HttpGet("https://raw.githubusercontent.com/Bernahahaha/Shadow/refs/heads/main/TEST"))()") -- Change link to your script!
             Fluent:Notify({
                 Title = "Script Link Copied",
                 Content = "Script URL copied to clipboard!",
