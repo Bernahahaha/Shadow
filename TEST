@@ -257,8 +257,226 @@ Tabs.Automation:AddToggle("KA_Enabled", {
         end
     end
 })
+-- Fluent Tabs.Automation required
 
------------------------- Gluttony (Auto Eat) ---------------------
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- CONFIG
+local BRING_RADIUS = 300
+local TARGET_NAME = "Small Tree"
+local LOG_MODEL_NAME = "Log"
+
+-- Utility: Find real Small Tree models (not clones) in Foliage
+local function getAllRealSmallTrees()
+    local foliage = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Foliage")
+    if not foliage then return {} end
+    local trees = {}
+    for _, obj in ipairs(foliage:GetChildren()) do
+        if obj.Name == TARGET_NAME and obj:IsA("Model") and obj.PrimaryPart then
+            table.insert(trees, obj)
+        end
+    end
+    return trees
+end
+
+-- Utility: Find a player by name (case-insensitive, partial ok)
+local function getPlayerByName(name)
+    name = name:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():find(name, 1, true) == 1 then
+            return plr
+        end
+    end
+    return nil
+end
+
+-- Utility: Find a Log model template for drop
+local function getLogTemplate()
+    local log
+    log = ReplicatedStorage:FindFirstChild(LOG_MODEL_NAME)
+    if log and log:IsA("Model") then return log end
+    if ReplicatedStorage:FindFirstChild("Assets") then
+        local asset = ReplicatedStorage.Assets:FindFirstChild(LOG_MODEL_NAME)
+        if asset and asset:IsA("Model") then return asset end
+    end
+    if Workspace:FindFirstChild(LOG_MODEL_NAME) and Workspace[LOG_MODEL_NAME]:IsA("Model") then
+        return Workspace[LOG_MODEL_NAME]
+    end
+    return nil
+end
+
+-- Drop Log at position
+local function spawnLogAt(pos)
+    local logTemplate = getLogTemplate()
+    if not logTemplate then
+        warn("No Log template found for dropping logs!")
+        return
+    end
+    local dropParent = Workspace:FindFirstChild("Items") or Workspace
+    local log = logTemplate:Clone()
+    local main = log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart")
+    if main then
+        main.CFrame = CFrame.new(pos)
+        main.Anchored = false
+    end
+    log.Parent = dropParent
+end
+
+-- "Bring" a real Small Tree model to a target player (moves the actual model, not a clone)
+local function bringSmallTreesToPlayer(targetPlayer)
+    if not targetPlayer then return end
+    local targetRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+    local trees = getAllRealSmallTrees()
+    local count = 0
+    for _, tree in ipairs(trees) do
+        -- Only bring trees within radius of you
+        local yourRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if yourRoot and (tree.PrimaryPart.Position - yourRoot.Position).Magnitude <= BRING_RADIUS then
+            -- Drop log when tree is destroyed/moved (hook once)
+            if not tree:FindFirstChild("LogDropHooked") then
+                local hooked = Instance.new("BoolValue")
+                hooked.Name = "LogDropHooked"
+                hooked.Parent = tree
+                tree.AncestryChanged:Connect(function(obj, parent)
+                    if not parent then
+                        local lastPos = obj.PrimaryPart and obj.PrimaryPart.Position
+                        if lastPos then spawnLogAt(lastPos) end
+                    end
+                end)
+            end
+            -- Move the real model
+            tree:SetPrimaryPartCFrame(targetRoot.CFrame + Vector3.new(math.random(-6,6), 2, math.random(-6,6)))
+            count = count + 1
+        end
+    end
+    if Fluent and Tabs and Tabs.Automation then
+        Fluent:Notify({
+            Title = "Bring Tree",
+            Content = "Brought "..count.." real Small Tree(s) to "..targetPlayer.Name..".",
+            Duration = 4
+        })
+    end
+end
+
+-- Show health GUI for all real Small Trees (shared for all players)
+local function createOrUpdateTreeGui(tree)
+    if not tree.PrimaryPart then return end
+    local gui = tree:FindFirstChild("AuraTreeBar")
+    if not gui then
+        gui = Instance.new("BillboardGui")
+        gui.Name = "AuraTreeBar"
+        gui.Adornee = tree.PrimaryPart
+        gui.Size = UDim2.new(4, 0, 1, 0)
+        gui.StudsOffset = Vector3.new(0, 5, 0)
+        gui.AlwaysOnTop = true
+
+        local bg = Instance.new("Frame")
+        bg.Name = "BG"
+        bg.Parent = gui
+        bg.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        bg.BorderSizePixel = 0
+        bg.Size = UDim2.new(1,0,0.33,0)
+        bg.Position = UDim2.new(0,0,0.33,0)
+
+        local hpBar = Instance.new("Frame")
+        hpBar.Name = "Fill"
+        hpBar.Parent = bg
+        hpBar.BackgroundColor3 = Color3.fromRGB(220, 205, 40)
+        hpBar.BorderSizePixel = 0
+        hpBar.Size = UDim2.new(1,0,1,0)
+
+        local label = Instance.new("TextLabel")
+        label.Name = "Label"
+        label.Parent = gui
+        label.Text = tree.Name
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1,0,0.33,0)
+        label.Position = UDim2.new(0,0,0,0)
+        label.TextColor3 = Color3.new(1,1,1)
+        label.TextStrokeTransparency = 0.6
+        label.Font = Enum.Font.SourceSansBold
+        label.TextScaled = true
+
+        gui.Parent = tree
+    end
+
+    -- Use server health if available
+    local maxHealth = tree:GetAttribute("MaxHealth") or 100
+    local health = tree:GetAttribute("Health") or maxHealth
+    local fill = gui:FindFirstChild("BG") and gui.BG:FindFirstChild("Fill")
+    if fill then
+        fill.Size = UDim2.new(math.clamp(health/maxHealth,0,1),0,1,0)
+    end
+
+    -- Listen for server updates, one connection per tree only!
+    if not tree:FindFirstChild("AuraHealthConnected") then
+        local marker = Instance.new("BoolValue")
+        marker.Name = "AuraHealthConnected"
+        marker.Parent = tree
+        tree:GetAttributeChangedSignal("Health"):Connect(function()
+            local h = tree:GetAttribute("Health") or maxHealth
+            if fill then fill.Size = UDim2.new(math.clamp(h/maxHealth,0,1),0,1,0) end
+        end)
+    end
+end
+
+local function guiAllSmallTrees()
+    for _, tree in ipairs(getAllRealSmallTrees()) do
+        createOrUpdateTreeGui(tree)
+    end
+end
+
+-- Listen for new trees for GUI
+local foliage = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Foliage")
+if foliage then
+    foliage.ChildAdded:Connect(function(obj)
+        if obj.Name == TARGET_NAME then
+            obj:GetPropertyChangedSignal("PrimaryPart"):Wait()
+            createOrUpdateTreeGui(obj)
+        end
+    end)
+end
+
+-- ========== GUI Integration for Fluent ==========
+if Tabs and Tabs.Automation then
+    Tabs.Automation:AddInput("BringTreeTargetInput", {
+        Title = "Target Player Name for Bring Tree",
+        Default = "",
+        Placeholder = "Enter part or full player name",
+        Callback = function(val)
+            _G.TargetBringPlayer = val
+        end
+    })
+
+    Tabs.Automation:AddButton({
+        Title = "Bring All Small Trees to Player",
+        Description = "Moves all real Small Trees within 300 studs of you to the specified player. Trees remain real and drop Logs when destroyed.",
+        Callback = function()
+            local targetName = (_G.TargetBringPlayer or ""):gsub("^%s*(.-)%s*$", "%1")
+            if targetName == "" then
+                Fluent:Notify({Title="Bring Tree",Content="Enter player name in input above!",Duration=3})
+                return
+            end
+            local targetPlr = getPlayerByName(targetName)
+            if not targetPlr then
+                Fluent:Notify({Title="Bring Tree",Content="Player not found: "..targetName,Duration=3})
+                return
+            end
+            bringSmallTreesToPlayer(targetPlr)
+        end
+    })
+
+    Tabs.Automation:AddButton({
+        Title = "Show Health GUI for All Small Trees",
+        Description = "Creates/updates a health bar on every Small Tree (no clones).",
+        Callback = guiAllSmallTrees
+    })
+end
+
 
 
 
@@ -775,15 +993,18 @@ end
 
 -- ================= Buttons =================
 
+-- ========================= Exploit Bring Real Items (Visible to All Players) =========================
+-- Replaces "safe drop + confirm" logic with a true exploit: moves the REAL model for all to see/collect.
+
 BringStuffTab:AddButton({
-    Title = "Bring Selected Items",
-    Description = "Bring chosen items to your location (safe drop + confirm)",
+    Title = "Exploit Bring Selected Items",
+    Description = "Brings the actual selected items to your location (real, visible to all, can be collected by anyone).",
     Callback = function()
         local root = getRoot()
         if not root or #selectedItems == 0 then
             if Fluent and Fluent.Notify then
                 Fluent:Notify({
-                    Title = "Bring Selected Items",
+                    Title = "Exploit Bring Items",
                     Content = "No items selected or player not ready.",
                     Duration = 3
                 })
@@ -791,23 +1012,13 @@ BringStuffTab:AddButton({
             return
         end
 
-        local dropped = 0
-        -- Drop from inventory via Remote
-        for _, itemName in pairs(selectedItems) do
-            if dropFromInventory(itemName) then
-                dropped = dropped + 1
-            end
-        end
-
-        -- Bring items from Workspace.Items
         local count = 0
         local itemsFolder = workspace:FindFirstChild("Items")
         if itemsFolder then
             for _, obj in pairs(itemsFolder:GetChildren()) do
-                if table.find(selectedItems, obj.Name) and isWithinRange(obj, root, bringRange) then
-                    dropNearPlayer(obj, root)
-                    simulatePickup(obj, root)
-                    confirmCatch(obj) -- confirm to server
+                if table.find(selectedItems, obj.Name) and isWithinRange(obj, root, bringRange) and obj:IsA("Model") and obj.PrimaryPart then
+                    -- Move the actual model to your position (visible to all, truly collectable)
+                    obj:SetPrimaryPartCFrame(root.CFrame + Vector3.new(math.random(-4,4), 2, math.random(-4,4)))
                     count = count + 1
                 end
             end
@@ -815,8 +1026,8 @@ BringStuffTab:AddButton({
 
         if Fluent and Fluent.Notify then
             Fluent:Notify({
-                Title = "Bring Selected Items",
-                Content = ("Dropped %d from inventory, moved %d in world (within %d studs)!"):format(dropped, count, bringRange),
+                Title = "Exploit Bring Items",
+                Content = ("Moved %d selected real item(s) to you (within %d studs, visible to all)!"):format(count, bringRange),
                 Duration = 4
             })
         end
@@ -824,14 +1035,14 @@ BringStuffTab:AddButton({
 })
 
 BringStuffTab:AddButton({
-    Title = "Bring All Items",
-    Description = "Bring all items to your location (safe drop + confirm)",
+    Title = "Exploit Bring All Items",
+    Description = "Brings ALL real items to your location (visible to all, can be picked up by anyone).",
     Callback = function()
         local root = getRoot()
         if not root then
             if Fluent and Fluent.Notify then
                 Fluent:Notify({
-                    Title = "Bring All Items",
+                    Title = "Exploit Bring Items",
                     Content = "Player not ready.",
                     Duration = 3
                 })
@@ -839,23 +1050,12 @@ BringStuffTab:AddButton({
             return
         end
 
-        local dropped = 0
-        -- Drop all items from inventory via Remote
-        for _, itemName in pairs(itemsList) do
-            if dropFromInventory(itemName) then
-                dropped = dropped + 1
-            end
-        end
-
-        -- Bring all items from Workspace.Items
         local count = 0
         local itemsFolder = workspace:FindFirstChild("Items")
         if itemsFolder then
             for _, obj in pairs(itemsFolder:GetChildren()) do
-                if table.find(itemsList, obj.Name) and isWithinRange(obj, root, bringRange) then
-                    dropNearPlayer(obj, root)
-                    simulatePickup(obj, root)
-                    confirmCatch(obj) -- confirm to server
+                if table.find(itemsList, obj.Name) and isWithinRange(obj, root, bringRange) and obj:IsA("Model") and obj.PrimaryPart then
+                    obj:SetPrimaryPartCFrame(root.CFrame + Vector3.new(math.random(-8,8), 2, math.random(-8,8)))
                     count = count + 1
                 end
             end
@@ -863,52 +1063,15 @@ BringStuffTab:AddButton({
 
         if Fluent and Fluent.Notify then
             Fluent:Notify({
-                Title = "Bring All Items",
-                Content = ("Dropped %d from inventory, moved %d in world (within %d studs)!"):format(dropped, count, bringRange),
+                Title = "Exploit Bring Items",
+                Content = ("Moved %d real item(s) to you (within %d studs, visible to all)!"):format(count, bringRange),
                 Duration = 4
             })
         end
     end
 })
 
-BringStuffTab:AddSection("Others")
 
-BringStuffTab:AddButton({
-    Title = "Bring All Trees",
-    Description = "Teleports all tree models close to your location (safe teleport)",
-    Callback = function()
-        local root = getRoot()
-        if not root then
-            if Fluent and Fluent.Notify then
-                Fluent:Notify({
-                    Title = "Bring All Trees",
-                    Content = "Player not ready.",
-                    Duration = 3
-                })
-            end
-            return
-        end
-        local itemsFolder = workspace:FindFirstChild("Items")
-        local count = 0
-        local treeIdx = 0
-        if itemsFolder then
-            for _, obj in pairs(itemsFolder:GetChildren()) do
-                if table.find(treesList, obj.Name) and isWithinRange(obj, root, bringRange) then
-                    treeIdx = treeIdx + 1
-                    teleportTreeNearPlayer(obj, root, treeIdx)
-                    count = count + 1
-                end
-            end
-        end
-        if Fluent and Fluent.Notify then
-            Fluent:Notify({
-                Title = "Bring All Trees",
-                Content = "Teleported " .. count .. " tree(s) near you (within "..bringRange.." studs)!",
-                Duration = 4
-            })
-        end
-    end
-})
 
 -----------------------------------------------------------------
 -- ======================= Local Player Tab =====================
