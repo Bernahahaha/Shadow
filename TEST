@@ -49,18 +49,6 @@ do
         end
     })
     Tabs.Main:AddButton({
-        Title = "Copy Script",
-        Description = "Copies this script link to your clipboard.",
-        Callback = function()
-            setclipboard("loadstring(game:HttpGet("https://raw.githubusercontent.com/Bernahahaha/Shadow/refs/heads/main/TEST"))()") -- Change link to your script!
-            Fluent:Notify({
-                Title = "Script Link Copied",
-                Content = "Script URL copied to clipboard!",
-                Duration = 4
-            })
-        end
-    })
-    Tabs.Main:AddButton({
         Title = "Close GUI",
         Description = "Closes the ShadowCore GUI.",
         Callback = function()
