@@ -1270,15 +1270,23 @@ Tabs.Teleport:AddButton({
 -----------------------------------------------------------------
 -- ======================= Visuals Tab ==========================
 -----------------------------------------------------------------
+-----------------------------------------------------------------
+-- ======================= Visuals Tab ==========================
+-----------------------------------------------------------------
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local LocalPlayer = Players.LocalPlayer
-    local PlayerESPEnabled = false
     local ESPPlayers = {}
+    local PlayerESPEnabled = false
+    local espChestEnabled = false
+    local drawnLabels = {}
+    local chestNames = {"Item Chest","Item Chest1","Item Chest2","Item Chest3","Item Chest 4","Item Chest5","Item Chest6"}
 
-    local VisualsTab = Tabs.Visuals
-    VisualsTab:AddToggle("PlayerESP", {
+    -----------------------------------------------------------------
+    -- Player ESP
+    -----------------------------------------------------------------
+    Tabs.Visuals:AddToggle("PlayerESP", {
         Title = "Enable Player ESP",
         Description = "Highlights players with health bar and distance",
         Default = false,
@@ -1293,10 +1301,19 @@ do
         end
     })
 
+    -- Player ESP Colorpicker
+    local PlayerESPColor = Tabs.Visuals:AddColorpicker("PlayerESPColor", {
+        Title = "Player ESP Color",
+        Description = "Color of player ESP name/distance text",
+        Transparency = 0,
+        Default = Color3.fromRGB(255, 255, 255)
+    })
+
     local function CreateESPForPlayer(plr)
         if ESPPlayers[plr] then return end
         if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
         local hrp = plr.Character.HumanoidRootPart
+
         local bb = Instance.new("BillboardGui")
         bb.Name = "SC_PlayerESP"
         bb.Adornee = hrp
@@ -1309,13 +1326,13 @@ do
         nameLabel.BackgroundTransparency = 1
         nameLabel.Size = UDim2.new(1,0,0.3,0)
         nameLabel.Font = Enum.Font.GothamBold
-        nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        nameLabel.TextColor3 = PlayerESPColor.Value
         nameLabel.TextScaled = true
         nameLabel.Text = plr.Name
         nameLabel.Parent = bb
 
         local healthBar = Instance.new("Frame")
-        healthBar.BackgroundColor3 = Color3.fromRGB(173, 216, 230) -- Light blue
+        healthBar.BackgroundColor3 = Color3.fromRGB(173, 216, 230)
         healthBar.Size = UDim2.new(1,0,0.2,0)
         healthBar.Position = UDim2.new(0,0,0.3,0)
         healthBar.BorderSizePixel = 0
@@ -1326,12 +1343,12 @@ do
         distLabel.Size = UDim2.new(1,0,0.3,0)
         distLabel.Position = UDim2.new(0,0,0.5,0)
         distLabel.Font = Enum.Font.Gotham
-        distLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        distLabel.TextColor3 = PlayerESPColor.Value
         distLabel.TextScaled = true
         distLabel.Text = "Distance: 0"
         distLabel.Parent = bb
 
-        ESPPlayers[plr] = {Billboard = bb, HealthBar = healthBar, DistanceLabel = distLabel}
+        ESPPlayers[plr] = {Billboard = bb, HealthBar = healthBar, DistanceLabel = distLabel, NameLabel = nameLabel}
     end
 
     RunService.RenderStepped:Connect(function()
@@ -1354,8 +1371,10 @@ do
                     else
                         data.HealthBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
                     end
+
                     local dist = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
                     data.DistanceLabel.Text = ("Distance: %.1f"):format(dist)
+
                     if dist < 20 then
                         data.DistanceLabel.TextColor3 = Color3.fromRGB(0,255,0)
                     elseif dist < 50 then
@@ -1363,60 +1382,147 @@ do
                     else
                         data.DistanceLabel.TextColor3 = Color3.fromRGB(255,0,0)
                     end
+
+                    data.NameLabel.TextColor3 = PlayerESPColor.Value
                 end
             end
         end
     end)
-end
--- ESP Chest (Simple)
-local espChestEnabled = false
-local chestNames = {"Item Chest","Item Chest1","Item Chest2","Item Chest3","Item Chest 4","Item Chest5","Item Chest6"}
-local drawnLabels = {}
 
-local function highlightChests()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if table.find(chestNames, obj.Name) and obj:IsA("Model") and not drawnLabels[obj] then
-            local bill = Instance.new("BillboardGui")
-            bill.Name = "ChestESP"
-            bill.Adornee = obj
-            bill.Size = UDim2.new(0, 100, 0, 40)
-            bill.StudsOffset = Vector3.new(0, 2, 0)
-            bill.AlwaysOnTop = true
-            bill.Parent = obj
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, 0, 1, 0)
-            label.BackgroundTransparency = 1
-            label.Text = obj.Name
-            label.TextColor3 = Color3.fromRGB(255, 221, 40)
-            label.Font = Enum.Font.GothamBold
-            label.TextStrokeTransparency = 0.2
-            label.TextScaled = true
-            label.Parent = bill
-            drawnLabels[obj] = bill
+    PlayerESPColor:OnChanged(function(newColor)
+        for _, data in pairs(ESPPlayers) do
+            if data.NameLabel then data.NameLabel.TextColor3 = newColor end
+            if data.DistanceLabel then data.DistanceLabel.TextColor3 = newColor end
+        end
+    end)
+
+    -----------------------------------------------------------------
+    -- Chest ESP
+    -----------------------------------------------------------------
+    local ChestESPColor = Tabs.Visuals:AddColorpicker("ChestESPColor", {
+        Title = "Chest ESP Color",
+        Description = "Choose the color of chest ESP labels",
+        Transparency = 0,
+        Default = Color3.fromRGB(255, 221, 40)
+    })
+
+    local function highlightChests()
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if table.find(chestNames, obj.Name) and obj:IsA("Model") and not drawnLabels[obj] then
+                local bill = Instance.new("BillboardGui")
+                bill.Name = "ChestESP"
+                bill.Adornee = obj
+                bill.Size = UDim2.new(0, 100, 0, 40)
+                bill.StudsOffset = Vector3.new(0, 2, 0)
+                bill.AlwaysOnTop = true
+                bill.Parent = obj
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.BackgroundTransparency = 1
+                label.Text = obj.Name
+                label.TextColor3 = ChestESPColor.Value
+                label.Font = Enum.Font.GothamBold
+                label.TextStrokeTransparency = 0.2
+                label.TextScaled = true
+                label.Parent = bill
+
+                drawnLabels[obj] = {Gui = bill, Label = label}
+            end
         end
     end
-end
 
-local function removeChestsESP()
-    for obj, gui in pairs(drawnLabels) do
-        if gui and gui.Parent then gui:Destroy() end
+    local function removeChestsESP()
+        for obj, data in pairs(drawnLabels) do
+            if data.Gui and data.Gui.Parent then data.Gui:Destroy() end
+        end
+        drawnLabels = {}
     end
-    drawnLabels = {}
-end
 
-Tabs.Visuals:AddToggle("ESPChest", {
-    Title = "Chest ESP (Simple)",
-    Description = "Highlights all Item Chest models",
-    Default = false,
-    Callback = function(val)
-        espChestEnabled = val
-        if not val then removeChestsESP() end
+    Tabs.Visuals:AddToggle("ESPChest", {
+        Title = "Chest ESP (Simple)",
+        Description = "Highlights all Item Chest models",
+        Default = false,
+        Callback = function(val)
+            espChestEnabled = val
+            if not val then removeChestsESP() end
+        end
+    })
+
+    ChestESPColor:OnChanged(function(newColor)
+        for _, data in pairs(drawnLabels) do
+            if data.Label then
+                data.Label.TextColor3 = newColor
+            end
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if espChestEnabled then highlightChests() end
+    end)
+
+    -----------------------------------------------------------------
+    -- Children ESP
+    -----------------------------------------------------------------
+    local ChildrenESPColor = Tabs.Visuals:AddColorpicker("ChildrenEspColor", {
+        Title = "Children ESP Color",
+        Description = "Color + transparency for Lost Child ESP",
+        Transparency = 0,
+        Default = Color3.fromRGB(255, 255, 0)
+    })
+
+    Tabs.Visuals:AddToggle("ChildrenESP", {
+        Title = "Children ESP",
+        Description = "Highlights Lost Child, Lost Child2, Lost Child3",
+        Default = false,
+        Callback = function(enabled)
+            local color = ChildrenESPColor.Value
+            local transparency = ChildrenESPColor.Transparency
+            UpdateChildrenESP(enabled, color, transparency)
+        end
+    })
+
+    -- Apply highlight function
+    local function ApplyESP(model, color, transparency)
+        if model:FindFirstChild("ESPHighlight") then
+            model.ESPHighlight:Destroy()
+        end
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESPHighlight"
+        highlight.Adornee = model
+        highlight.FillColor = color
+        highlight.FillTransparency = transparency or 0
+        highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+        highlight.OutlineTransparency = 0
+        highlight.Parent = model
     end
-})
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    if espChestEnabled then highlightChests() end
-end)
+    -- Update function
+    function UpdateChildrenESP(enabled, color, transparency)
+        local characters = workspace:FindFirstChild("Characters")
+        if not characters then return end
+
+        for _, childName in ipairs({"Lost Child", "Lost Child2", "Lost Child3"}) do
+            local model = characters:FindFirstChild(childName)
+            if model and model:IsA("Model") then
+                if enabled then
+                    ApplyESP(model, color, transparency)
+                else
+                    if model:FindFirstChild("ESPHighlight") then
+                        model.ESPHighlight:Destroy()
+                    end
+                end
+            end
+        end
+    end
+
+    -- React to colorpicker changes
+    ChildrenESPColor:OnChanged(function(color)
+        if Options.ChildrenESP.Value then
+            UpdateChildrenESP(true, color, ChildrenESPColor.Transparency)
+        end
+    end)
+end
 -----------------------------------------------------------------
 -- ======================= Settings Tab =========================
 -----------------------------------------------------------------
