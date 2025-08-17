@@ -7,12 +7,13 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- ======================= GUI Setup =======================
-local guiWidth, guiHeight = 460, 300
+local guiWidth, guiHeight = 460, 350
 local Window = Fluent:CreateWindow({
-    Title = "ShadowCore " .. Fluent.Version,
+    Title = "ShadowCore Upgraded " .. Fluent.Version,
     SubTitle = "by Sin",
     TabWidth = 160,
     Size = UDim2.fromOffset(guiWidth, guiHeight),
@@ -25,25 +26,33 @@ local Options = Fluent.Options
 -- ======================= Tabs =======================
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    PlayerTarget = Window:AddTab({ Title = "Targeting", Icon = "target" }),
+    Protection = Window:AddTab({ Title = "Protection", Icon = "shield" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
 -- ======================= Feature State =======================
 local State = {
     InfiniteJump = false,
+    JumpMultiplier = 1,
     WalkSpeedEnabled = false,
+    SprintEnabled = false,
+    WalkSpeedValue = 16,
     PlayerESP = false,
-    ItemESP = false,
-    AutoCollect = false,
-    BringItems = false,
-    MultiTeleport = false,
-    AimAssist = false,
+    TrackDistance = false,
+    AutoFollow = false,
+    AimAtPlayer = false,
+    HighlightPlayer = false,
+    TargetDistance = 5,
+    -- Protection Features
+    AntiFling = false,
+    AntiLoopKill = false,
+    AntiVoid = false,
     AntiAFK = false,
-    AutoTool = false
+    AntiTeleport = false,
 }
 
-local walkSpeedValue = 16
-local defaultWalkSpeed = 16
+local targetPlayer
 
 -- ======================= Helper Functions =======================
 local function getHumanoid(pl)
@@ -52,113 +61,177 @@ local function getHumanoid(pl)
     return nil
 end
 
-local function getLocalHumanoid()
-    return getHumanoid(LocalPlayer)
+local function getRoot(pl)
+    return pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- ======================= Infinite Jump =======================
-local infJumpConn
-Tabs.Main:AddToggle("InfiniteJumpToggle", { Title = "Infinite Jump", Default = false }):OnChanged(function()
-    State.InfiniteJump = Options.InfiniteJumpToggle.Value
+local function getPlayerNames()
+    local list = {}
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= LocalPlayer then table.insert(list, pl.Name) end
+    end
+    return list
+end
+
+-- ======================= Main Tab Features =======================
+-- Infinite Jump
+UserInputService.JumpRequest:Connect(function()
     if State.InfiniteJump then
-        infJumpConn = UserInputService.JumpRequest:Connect(function()
-            local hum = getLocalHumanoid()
-            if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end) end
-        end)
-    else
-        if infJumpConn then infJumpConn:Disconnect() end
-    end
-end)
-
--- ======================= WalkSpeed =======================
-local walkConn
-Tabs.Main:AddToggle("WalkSpeedToggle", { Title = "Universal WalkSpeed", Default = false }):OnChanged(function()
-    State.WalkSpeedEnabled = Options.WalkSpeedToggle.Value
-    if State.WalkSpeedEnabled then
-        walkConn = RunService.Heartbeat:Connect(function()
-            local hum = getLocalHumanoid()
-            if hum then pcall(function() hum.WalkSpeed = walkSpeedValue end) end
-        end)
-    else
-        if walkConn then walkConn:Disconnect() end
-        local hum = getLocalHumanoid()
-        if hum then pcall(function() hum.WalkSpeed = defaultWalkSpeed end) end
-    end
-end)
-
-Tabs.Main:AddSlider("WalkSpeedSlider", {
-    Title = "WalkSpeed Value",
-    Description = "Set WalkSpeed (8-200)",
-    Min = 8,
-    Max = 200,
-    Default = walkSpeedValue,
-    Rounding = 1,
-    Callback = function(v)
-        walkSpeedValue = v
-    end
-}):OnChanged(function(v)
-    walkSpeedValue = v
-end)
-
--- ======================= Player ESP =======================
-Tabs.Main:AddToggle("PlayerESP", { Title = "Player ESP", Default = false }):OnChanged(function()
-    State.PlayerESP = Options.PlayerESP.Value
-    Fluent:Notify({ Title = "Player ESP", Content = State.PlayerESP and "Enabled" or "Disabled", Duration = 3 })
-end)
-
--- ======================= Item ESP =======================
-Tabs.Main:AddToggle("ItemESP", { Title = "Item ESP", Default = false }):OnChanged(function()
-    State.ItemESP = Options.ItemESP.Value
-    Fluent:Notify({ Title = "Item ESP", Content = State.ItemESP and "Enabled" or "Disabled", Duration = 3 })
-end)
-
--- ======================= Auto Collect =======================
-Tabs.Main:AddToggle("AutoCollect", { Title = "Auto Collect", Default = false }):OnChanged(function()
-    State.AutoCollect = Options.AutoCollect.Value
-end)
-
--- ======================= Bring Items =======================
-Tabs.Main:AddToggle("BringItems", { Title = "Bring Items", Default = false }):OnChanged(function()
-    State.BringItems = Options.BringItems.Value
-end)
-
--- ======================= Multi Teleport =======================
-Tabs.Main:AddToggle("MultiTeleport", { Title = "Multi Teleport", Default = false }):OnChanged(function()
-    State.MultiTeleport = Options.MultiTeleport.Value
-end)
-
--- ======================= Aim Assist =======================
-Tabs.Main:AddToggle("AimAssist", { Title = "Aim Assist", Default = false }):OnChanged(function()
-    State.AimAssist = Options.AimAssist.Value
-end)
-
--- ======================= Anti-AFK =======================
-Tabs.Main:AddToggle("AntiAFK", { Title = "Anti-AFK", Default = false }):OnChanged(function()
-    State.AntiAFK = Options.AntiAFK.Value
-    if State.AntiAFK then
-        spawn(function()
-            while State.AntiAFK do
-                pcall(function() LocalPlayer.Idled:Connect(function() end) end)
-                wait(60)
+        local hum = getHumanoid(LocalPlayer)
+        if hum then
+            pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+            if hum.Parent:FindFirstChild("HumanoidRootPart") then
+                hum.Parent.HumanoidRootPart.Velocity = Vector3.new(0,50*State.JumpMultiplier,0)
             end
-        end)
+        end
+    end
+end)
+Tabs.Main:AddToggle("InfiniteJump", {Title="Infinite Jump", Default=false}):OnChanged(function(val) State.InfiniteJump = val end)
+Tabs.Main:AddSlider("JumpMultiplier", {Title="Jump Multiplier", Min=1, Max=5, Default=1, Rounding=1}):OnChanged(function(val) State.JumpMultiplier = val end)
+
+-- WalkSpeed + Sprint
+Tabs.Main:AddToggle("WalkSpeed", {Title="WalkSpeed", Default=false}):OnChanged(function(val)
+    State.WalkSpeedEnabled = val
+    if not val and getHumanoid(LocalPlayer) then getHumanoid(LocalPlayer).WalkSpeed = 16 end
+end)
+Tabs.Main:AddSlider("WalkSpeedValue", {Title="WalkSpeed Value", Min=8, Max=200, Default=16, Rounding=1}):OnChanged(function(val) State.WalkSpeedValue = val end)
+Tabs.Main:AddToggle("Sprint", {Title="Sprint (Hold Shift)", Default=false}):OnChanged(function(val) State.SprintEnabled = val end)
+RunService.Heartbeat:Connect(function()
+    local hum = getHumanoid(LocalPlayer)
+    if hum and State.WalkSpeedEnabled then
+        local speed = State.WalkSpeedValue
+        if State.SprintEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed*2 end
+        hum.WalkSpeed = speed
     end
 end)
 
--- ======================= Auto Tool =======================
-Tabs.Main:AddToggle("AutoTool", { Title = "Auto Tool", Default = false }):OnChanged(function()
-    State.AutoTool = Options.AutoTool.Value
+-- Player ESP
+Tabs.Main:AddToggle("PlayerESP", {Title="Player ESP", Default=false}):OnChanged(function(val) State.PlayerESP = val end)
+RunService.RenderStepped:Connect(function()
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= LocalPlayer and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+            if State.PlayerESP then
+                if not pl.Character:FindFirstChild("_ESP") then
+                    local h = Instance.new("Highlight")
+                    h.Name = "_ESP"
+                    h.Adornee = pl.Character
+                    h.FillColor = Color3.new(1,0,0)
+                    h.OutlineColor = Color3.new(1,1,1)
+                    h.Parent = pl.Character
+                end
+            elseif pl.Character:FindFirstChild("_ESP") then
+                pl.Character._ESP:Destroy()
+            end
+        end
+    end
 end)
 
--- ======================= Save / Load =======================
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-InterfaceManager:SetFolder("ShadowCore")
-SaveManager:SetFolder("ShadowCore/specific-game")
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-SaveManager:LoadAutoloadConfig()
+-- ======================= Player Targeting Tab =======================
+local function updatePlayerList()
+    local names = {}
+    for _,pl in pairs(Players:GetPlayers()) do if pl ~= LocalPlayer then table.insert(names, pl.Name) end end
+    return names
+end
 
--- ======================= Final Notes =======================
-Tabs.Main:AddParagraph({ Title = "Notes", Content = "All 10 universal features loaded: Infinite Jump, WalkSpeed, Player ESP, Item ESP, Auto Collect, Bring Items, Multi Teleport, Aim Assist, Anti-AFK, Auto Tool. Works in most Roblox games." })
+local TargetDropdown = Tabs.PlayerTarget:AddDropdown("TargetPlayerDropdown", {Title="Select Target Player", Values=updatePlayerList(), Multi=false, Default=updatePlayerList()[1]})
+TargetDropdown:OnChanged(function(val) targetPlayer = Players:FindFirstChild(val) end)
+
+Tabs.PlayerTarget:AddToggle("AutoFollow", {Title="Auto Follow", Default=false}):OnChanged(function(val) State.AutoFollow = val end)
+RunService.Heartbeat:Connect(function()
+    if State.AutoFollow and targetPlayer and getRoot(targetPlayer) and getRoot(LocalPlayer) then
+        getRoot(LocalPlayer).CFrame = getRoot(targetPlayer).CFrame * CFrame.new(0,0,State.TargetDistance or 5)
+    end
+end)
+
+Tabs.PlayerTarget:AddToggle("AimAtPlayer", {Title="Aim At Player", Default=false}):OnChanged(function(val) State.AimAtPlayer = val end)
+RunService.RenderStepped:Connect(function()
+    if State.AimAtPlayer and targetPlayer and getRoot(targetPlayer) then
+        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, getRoot(targetPlayer).Position)
+    end
+end)
+
+Tabs.PlayerTarget:AddToggle("HighlightPlayer", {Title="Highlight Player", Default=false}):OnChanged(function(val)
+    if targetPlayer and targetPlayer.Character then
+        if val then
+            local highlightInst = Instance.new("Highlight")
+            highlightInst.Adornee = targetPlayer.Character
+            highlightInst.FillColor = Color3.fromRGB(255,0,0)
+            highlightInst.OutlineColor = Color3.fromRGB(255,255,255)
+            highlightInst.Parent = targetPlayer.Character
+        else
+            if targetPlayer.Character:FindFirstChild("Highlight") then
+                targetPlayer.Character.Highlight:Destroy()
+            end
+        end
+    end
+end)
+
+-- ======================= Protection Tab =======================
+Tabs.Protection:AddToggle("AntiFling", {Title="Anti Fling", Default=false}):OnChanged(function(val) State.AntiFling = val end)
+Tabs.Protection:AddToggle("AntiLoopKill", {Title="Anti Loop Kill", Default=false}):OnChanged(function(val) State.AntiLoopKill = val end)
+Tabs.Protection:AddToggle("AntiVoid", {Title="Anti Void", Default=false}):OnChanged(function(val) State.AntiVoid = val end)
+Tabs.Protection:AddToggle("AntiAFK", {Title="Anti AFK", Default=false}):OnChanged(function(val) State.AntiAFK = val end)
+Tabs.Protection:AddToggle("AntiTeleport", {Title="Anti Teleport", Default=false}):OnChanged(function(val) State.AntiTeleport = val end)
+
+RunService.Heartbeat:Connect(function()
+    local root = getRoot(LocalPlayer)
+    local hum = getHumanoid(LocalPlayer)
+    if root then
+        -- Anti-Fling
+        if State.AntiFling then
+            root.Velocity = Vector3.new(0, root.Velocity.Y, 0)
+            root.RotVelocity = Vector3.new(0,0,0)
+            for _, child in pairs(root:GetChildren()) do
+                if child:IsA("BodyVelocity") or child:IsA("BodyGyro") or child:IsA("BodyPosition") then
+                    child:Destroy()
+                end
+            end
+        end
+        -- Anti-Loop Kill
+        if State.AntiLoopKill and hum and hum.Health < hum.MaxHealth then
+            hum.Health = hum.MaxHealth
+        end
+        -- Anti-Void
+        if State.AntiVoid and root.Position.Y < -50 then
+            root.CFrame = CFrame.new(Vector3.new(0,50,0))
+        end
+        -- Anti-Teleport
+        if State.AntiTeleport then
+            local desiredCFrame = root.CFrame
+            root:GetPropertyChangedSignal("CFrame"):Connect(function()
+                if State.AntiTeleport then
+                    root.CFrame = desiredCFrame
+                end
+            end)
+        end
+    end
+end)
+
+-- Anti-AFK
+task.spawn(function()
+    while task.wait(60) do
+        if State.AntiAFK then
+            local vu = game:GetService("VirtualUser")
+            vu:CaptureController()
+            vu:ClickButton1(Vector2.new())
+            local root = getRoot(LocalPlayer)
+            if root then root.CFrame = root.CFrame + Vector3.new(0,0.1,0) end
+        end
+    end
+end)
+
+-- ======================= Settings Tab =======================
+Tabs.Settings:AddParagraph({Title="Settings", Content="Configure your ShadowCore GUI and save/load options here."})
+Tabs.Settings:AddButton({Title="Reset GUI", Description="Resets window position and theme", Callback=function() Window:Reset() end})
+
+-- ======================= Save / Interface Managers =======================
+do
+    SaveManager:SetLibrary(Fluent)
+    InterfaceManager:SetLibrary(Fluent)
+    SaveManager:IgnoreThemeSettings()
+    SaveManager:SetIgnoreIndexes({})
+    InterfaceManager:SetFolder("FluentScriptHub")
+    SaveManager:SetFolder("FluentScriptHub/specific-game")
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+    SaveManager:BuildConfigSection(Tabs.Settings)
+end
