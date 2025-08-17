@@ -31,6 +31,9 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
+-- Add 99 Nights in the Forest Tab (empty)
+Tabs.Forest = Window:AddTab({ Title = "99 Nights Forest", Icon = "tree" })
+
 -- ======================= Feature State =======================
 local State = {
     InfiniteJump = false,
@@ -219,6 +222,305 @@ task.spawn(function()
         end
     end
 end)
+
+
+-- ======================= 99 Nights in the Forest Tab Features =======================
+local ForestTab = Tabs.Forest -- Already created empty tab
+
+-- Use existing services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+
+---------------------------- Kill Aura --------------------------
+local KillAuraEnabled = false
+local attackRange = 300
+local attackCooldown = 0.5
+local lastAttackTimes = {}
+local useWhitelist = true
+local attackAllAtOnce = false
+local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword","Katana"}
+local allTargets = {
+    "Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite",
+    "Arctic Fox","Black Robe Cultist","Red Robe Cultist","Crossbow Cultist"
+}
+local targetWhitelist = {}
+for _, n in ipairs(allTargets) do targetWhitelist[n] = true end
+
+local function notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {Title=title, Text=text, Duration=duration or 3})
+    end)
+end
+
+local function getHRP()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return char.HumanoidRootPart
+    end
+    return nil
+end
+
+local function findBestWeapon()
+    local inv = LocalPlayer:FindFirstChild("Inventory")
+    if not inv then return nil end
+    for _, w in ipairs(weaponPriority) do
+        local f = inv:FindFirstChild(w)
+        if f then return f end
+    end
+    return nil
+end
+
+local function isTargetValid(target, hrp)
+    if not target or not target.PrimaryPart then return false end
+    if useWhitelist and not targetWhitelist[target.Name] then return false end
+    local dist = (target.PrimaryPart.Position - hrp.Position).Magnitude
+    return dist <= attackRange
+end
+
+ForestTab:AddSection("Kill Aura (Advanced)")
+ForestTab:AddSlider("KA_Range", {
+    Title = "Attack Range",
+    Description = "Distance to attack mobs",
+    Default = attackRange,
+    Min = 50, Max = 500, Rounding = 0,
+    Callback = function(v) attackRange = v end
+})
+ForestTab:AddSlider("KA_Cooldown", {
+    Title = "Attack Cooldown",
+    Description = "Delay between hits",
+    Default = attackCooldown,
+    Min = 0.1, Max = 2, Rounding = 2,
+    Callback = function(v) attackCooldown = v end
+})
+ForestTab:AddToggle("KA_Whitelist", {
+    Title = "Use Target Whitelist",
+    Default = useWhitelist,
+    Callback = function(v) useWhitelist = v end
+})
+ForestTab:AddToggle("KA_AllAtOnce", {
+    Title = "Attack All Targets At Once",
+    Default = attackAllAtOnce,
+    Callback = function(v) attackAllAtOnce = v end
+})
+ForestTab:AddDropdown("KA_WeaponPriority", {
+    Title = "Weapon Priority (Display)",
+    Values = weaponPriority,
+    Default = weaponPriority[1],
+    Multi = false,
+    Callback = function(val)
+        notify("Kill Aura", "Priority head set to: "..tostring(val), 3)
+    end
+})
+ForestTab:AddToggle("KA_Enabled", {
+    Title = "Kill Aura (Advanced)",
+    Default = false,
+    Callback = function(enabled)
+        KillAuraEnabled = enabled
+        if enabled then
+            notify("Kill Aura", "Enabled", 3)
+            local RemoteToolDamage = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("ToolDamageObject")
+            task.spawn(function()
+                while KillAuraEnabled do
+                    local hrp = getHRP()
+                    if not hrp then task.wait(0.5) continue end
+                    local weapon = findBestWeapon()
+                    if not weapon or not RemoteToolDamage then task.wait(1) continue end
+                    local ownerId = weapon:GetAttribute("Owner") or ""
+                    local charactersFolder = Workspace:FindFirstChild("Characters")
+                    if not charactersFolder then task.wait(0.5) continue end
+
+                    if attackAllAtOnce then
+                        local hits = 0
+                        for _, tgt in ipairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(tgt, hrp) then
+                                local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
+                                pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
+                                hits += 1
+                            end
+                        end
+                        if hits > 0 then
+                            notify("Kill Aura", ("Attacked %d targets."):format(hits), 2)
+                        end
+                        task.wait(attackCooldown)
+                    else
+                        for _, tgt in ipairs(charactersFolder:GetChildren()) do
+                            if isTargetValid(tgt, hrp) then
+                                local now = tick()
+                                if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
+                                    local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
+                                    pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
+                                    lastAttackTimes[tgt] = now
+                                    task.wait(0.05)
+                                end
+                            end
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end)
+        else
+            notify("Kill Aura", "Disabled", 3)
+            lastAttackTimes = {}
+        end
+    end
+})
+
+-- ================= Bring Small Trees / Auto Log =================
+-- Config
+local BRING_RADIUS = 300
+local TARGET_NAME = "Small Tree"
+local LOG_MODEL_NAME = "Log"
+
+local function getAllRealSmallTrees()
+    local foliage = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Foliage")
+    if not foliage then return {} end
+    local trees = {}
+    for _, obj in ipairs(foliage:GetChildren()) do
+        if obj.Name == TARGET_NAME and obj:IsA("Model") and obj.PrimaryPart then
+            table.insert(trees, obj)
+        end
+    end
+    return trees
+end
+
+local function getPlayerByName(name)
+    name = name:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():find(name, 1, true) == 1 then
+            return plr
+        end
+    end
+    return nil
+end
+
+local function getLogTemplate()
+    local log = ReplicatedStorage:FindFirstChild(LOG_MODEL_NAME)
+    if log and log:IsA("Model") then return log end
+    if ReplicatedStorage:FindFirstChild("Assets") then
+        local asset = ReplicatedStorage.Assets:FindFirstChild(LOG_MODEL_NAME)
+        if asset and asset:IsA("Model") then return asset end
+    end
+    if Workspace:FindFirstChild(LOG_MODEL_NAME) and Workspace[LOG_MODEL_NAME]:IsA("Model") then
+        return Workspace[LOG_MODEL_NAME]
+    end
+    return nil
+end
+
+local function spawnLogAt(pos)
+    local logTemplate = getLogTemplate()
+    if not logTemplate then warn("No Log template found!") return end
+    local dropParent = Workspace:FindFirstChild("Items") or Workspace
+    local log = logTemplate:Clone()
+    local main = log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart")
+    if main then
+        main.CFrame = CFrame.new(pos)
+        main.Anchored = false
+    end
+    log.Parent = dropParent
+end
+
+local function bringSmallTreesToPlayer(targetPlayer)
+    if not targetPlayer then return end
+    local targetRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+    local trees = getAllRealSmallTrees()
+    local count = 0
+    for _, tree in ipairs(trees) do
+        local yourRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if yourRoot and (tree.PrimaryPart.Position - yourRoot.Position).Magnitude <= BRING_RADIUS then
+            if not tree:FindFirstChild("LogDropHooked") then
+                local hooked = Instance.new("BoolValue")
+                hooked.Name = "LogDropHooked"
+                hooked.Parent = tree
+                tree.AncestryChanged:Connect(function(obj, parent)
+                    if not parent then
+                        local lastPos = obj.PrimaryPart and obj.PrimaryPart.Position
+                        if lastPos then spawnLogAt(lastPos) end
+                    end
+                end)
+            end
+            tree:SetPrimaryPartCFrame(targetRoot.CFrame + Vector3.new(math.random(-6,6), 2, math.random(-6,6)))
+            count = count + 1
+        end
+    end
+    Fluent:Notify({
+        Title = "Bring Tree",
+        Content = "Brought "..count.." real Small Tree(s) to "..targetPlayer.Name..".",
+        Duration = 4
+    })
+end
+
+local function guiAllSmallTrees()
+    for _, tree in ipairs(getAllRealSmallTrees()) do
+        local gui = tree:FindFirstChild("AuraTreeBar")
+        if not gui and tree.PrimaryPart then
+            gui = Instance.new("BillboardGui")
+            gui.Name = "AuraTreeBar"
+            gui.Adornee = tree.PrimaryPart
+            gui.Size = UDim2.new(4,0,1,0)
+            gui.StudsOffset = Vector3.new(0,5,0)
+            gui.AlwaysOnTop = true
+            gui.Parent = tree
+        end
+    end
+end
+
+-- GUI Integration
+ForestTab:AddInput("BringTreeTargetInput", {
+    Title = "Target Player Name for Bring Tree",
+    Default = "",
+    Placeholder = "Enter part or full player name",
+    Callback = function(val) _G.TargetBringPlayer = val end
+})
+
+ForestTab:AddButton({
+    Title = "Bring All Small Trees to Player",
+    Description = "Moves all real Small Trees within 300 studs of you to the specified player. Trees remain real and drop Logs when destroyed.",
+    Callback = function()
+        local targetName = (_G.TargetBringPlayer or ""):gsub("^%s*(.-)%s*$", "%1")
+        if targetName == "" then
+            Fluent:Notify({Title="Bring Tree",Content="Enter player name in input above!",Duration=3})
+            return
+        end
+        local targetPlr = getPlayerByName(targetName)
+        if not targetPlr then
+            Fluent:Notify({Title="Bring Tree",Content="Player not found: "..targetName,Duration=3})
+            return
+        end
+        bringSmallTreesToPlayer(targetPlr)
+    end
+})
+
+ForestTab:AddButton({
+    Title = "Show Health GUI for All Small Trees",
+    Description = "Creates/updates a health bar on every Small Tree (no clones).",
+    Callback = guiAllSmallTrees
+})
+
+-- Auto Log
+ForestTab:AddButton({
+    Title = "Auto Log",
+    Description = "Brings all Log models to your position",
+    Callback = function()
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        local count = 0
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name == "Log" then
+                obj.CFrame = root.CFrame + Vector3.new(0,5,0)
+                count = count + 1
+            end
+        end
+        Fluent:Notify({
+            Title = "Auto Log",
+            Content = "Brought " .. count .. " log(s) to your location!",
+            Duration = 4
+        })
+    end
+})
 
 -- ======================= Settings Tab =======================
 Tabs.Settings:AddParagraph({Title="Settings", Content="Configure your ShadowCore GUI and save/load options here."})
