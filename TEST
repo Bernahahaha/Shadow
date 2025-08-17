@@ -1370,5 +1370,5 @@ InterfaceManager:SetFolder("ShadowCore")
 SaveManager:SetFolder("ShadowCore/saves")
 InterfaceManager:BuildInterfaceSection(Window)
 SaveManager:BuildConfigSection(Window)
-
+})
 SaveManager:LoadAutoloadConfig()
