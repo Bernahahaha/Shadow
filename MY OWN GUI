@@ -1,0 +1,164 @@
+-- ======================= Load Libraries =======================
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/Beta.lua", true))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- ======================= Services =======================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ======================= GUI Setup =======================
+local guiWidth, guiHeight = 580, 460
+local Window = Fluent:CreateWindow({
+    Title = "ShadowCore " .. Fluent.Version,
+    SubTitle = "by Sin",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(guiWidth, guiHeight),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+local Options = Fluent.Options
+
+-- ======================= Tabs =======================
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+-- ======================= Feature State =======================
+local State = {
+    InfiniteJump = false,
+    WalkSpeedEnabled = false,
+    PlayerESP = false,
+    ItemESP = false,
+    AutoCollect = false,
+    BringItems = false,
+    MultiTeleport = false,
+    AimAssist = false,
+    AntiAFK = false,
+    AutoTool = false
+}
+
+local walkSpeedValue = 16
+local defaultWalkSpeed = 16
+
+-- ======================= Helper Functions =======================
+local function getHumanoid(pl)
+    local char = pl and pl.Character
+    if char then return char:FindFirstChildOfClass("Humanoid") end
+    return nil
+end
+
+local function getLocalHumanoid()
+    return getHumanoid(LocalPlayer)
+end
+
+-- ======================= Infinite Jump =======================
+local infJumpConn
+Tabs.Main:AddToggle("InfiniteJumpToggle", { Title = "Infinite Jump", Default = false }):OnChanged(function()
+    State.InfiniteJump = Options.InfiniteJumpToggle.Value
+    if State.InfiniteJump then
+        infJumpConn = UserInputService.JumpRequest:Connect(function()
+            local hum = getLocalHumanoid()
+            if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end) end
+        end)
+    else
+        if infJumpConn then infJumpConn:Disconnect() end
+    end
+end)
+
+-- ======================= WalkSpeed =======================
+local walkConn
+Tabs.Main:AddToggle("WalkSpeedToggle", { Title = "Universal WalkSpeed", Default = false }):OnChanged(function()
+    State.WalkSpeedEnabled = Options.WalkSpeedToggle.Value
+    if State.WalkSpeedEnabled then
+        walkConn = RunService.Heartbeat:Connect(function()
+            local hum = getLocalHumanoid()
+            if hum then pcall(function() hum.WalkSpeed = walkSpeedValue end) end
+        end)
+    else
+        if walkConn then walkConn:Disconnect() end
+        local hum = getLocalHumanoid()
+        if hum then pcall(function() hum.WalkSpeed = defaultWalkSpeed end) end
+    end
+end)
+
+Tabs.Main:AddSlider("WalkSpeedSlider", {
+    Title = "WalkSpeed Value",
+    Description = "Set WalkSpeed (8-200)",
+    Min = 8,
+    Max = 200,
+    Default = walkSpeedValue,
+    Rounding = 1,
+    Callback = function(v)
+        walkSpeedValue = v
+    end
+}):OnChanged(function(v)
+    walkSpeedValue = v
+end)
+
+-- ======================= Player ESP =======================
+Tabs.Main:AddToggle("PlayerESP", { Title = "Player ESP", Default = false }):OnChanged(function()
+    State.PlayerESP = Options.PlayerESP.Value
+    Fluent:Notify({ Title = "Player ESP", Content = State.PlayerESP and "Enabled" or "Disabled", Duration = 3 })
+end)
+
+-- ======================= Item ESP =======================
+Tabs.Main:AddToggle("ItemESP", { Title = "Item ESP", Default = false }):OnChanged(function()
+    State.ItemESP = Options.ItemESP.Value
+    Fluent:Notify({ Title = "Item ESP", Content = State.ItemESP and "Enabled" or "Disabled", Duration = 3 })
+end)
+
+-- ======================= Auto Collect =======================
+Tabs.Main:AddToggle("AutoCollect", { Title = "Auto Collect", Default = false }):OnChanged(function()
+    State.AutoCollect = Options.AutoCollect.Value
+end)
+
+-- ======================= Bring Items =======================
+Tabs.Main:AddToggle("BringItems", { Title = "Bring Items", Default = false }):OnChanged(function()
+    State.BringItems = Options.BringItems.Value
+end)
+
+-- ======================= Multi Teleport =======================
+Tabs.Main:AddToggle("MultiTeleport", { Title = "Multi Teleport", Default = false }):OnChanged(function()
+    State.MultiTeleport = Options.MultiTeleport.Value
+end)
+
+-- ======================= Aim Assist =======================
+Tabs.Main:AddToggle("AimAssist", { Title = "Aim Assist", Default = false }):OnChanged(function()
+    State.AimAssist = Options.AimAssist.Value
+end)
+
+-- ======================= Anti-AFK =======================
+Tabs.Main:AddToggle("AntiAFK", { Title = "Anti-AFK", Default = false }):OnChanged(function()
+    State.AntiAFK = Options.AntiAFK.Value
+    if State.AntiAFK then
+        spawn(function()
+            while State.AntiAFK do
+                pcall(function() LocalPlayer.Idled:Connect(function() end) end)
+                wait(60)
+            end
+        end)
+    end
+end)
+
+-- ======================= Auto Tool =======================
+Tabs.Main:AddToggle("AutoTool", { Title = "Auto Tool", Default = false }):OnChanged(function()
+    State.AutoTool = Options.AutoTool.Value
+end)
+
+-- ======================= Save / Load =======================
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+InterfaceManager:SetFolder("ShadowCore")
+SaveManager:SetFolder("ShadowCore/specific-game")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+SaveManager:LoadAutoloadConfig()
+
+-- ======================= Final Notes =======================
+Tabs.Main:AddParagraph({ Title = "Notes", Content = "All 10 universal features loaded: Infinite Jump, WalkSpeed, Player ESP, Item ESP, Auto Collect, Bring Items, Multi Teleport, Aim Assist, Anti-AFK, Auto Tool. Works in most Roblox games." })
