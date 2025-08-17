@@ -10,7 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ======================= GUI Setup =======================
-local guiWidth, guiHeight = 460, 500
+local guiWidth, guiHeight = 460, 300
 local Window = Fluent:CreateWindow({
     Title = "ShadowCore " .. Fluent.Version,
     SubTitle = "by Sin",
