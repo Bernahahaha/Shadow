@@ -10,14 +10,14 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ======================= GUI Setup =======================
-local guiWidth, guiHeight = 580, 460
+local guiWidth, guiHeight = 460, 300
 local Window = Fluent:CreateWindow({
     Title = "ShadowCore " .. Fluent.Version,
     SubTitle = "by Sin",
     TabWidth = 160,
     Size = UDim2.fromOffset(guiWidth, guiHeight),
     Acrylic = true,
-    Theme = "Dark",
+    Theme = "Midnight",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 local Options = Fluent.Options
