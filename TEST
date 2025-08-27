@@ -1,22 +1,136 @@
--- ======================= Load Libraries =======================
-local Fluent = loadstring(Game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/Beta.lua", true))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+-- ======================= ShadowCore Key System =======================
+-- CONFIG
+local lootlabsLink = "https://loot-link.com/s?0zpUxvqA"        -- Your monetized link
+local correctKey   = "SHADOWCORE3256"                          -- Main key
 
--- ======================= GUI Setup =======================
-local guiWidth, guiHeight = 460, 300
-local Window = Fluent:CreateWindow({
-    Title = "ShadowCore " .. Fluent.Version,
-    SubTitle = "by Sin",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(guiWidth, guiHeight),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
-local Options = Fluent.Options
+-- Services
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 
--- ======================= Tabs =======================
+-- GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Name = "ShadowCore_KeySystem"
+ScreenGui.Parent = CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 420, 0, 260)
+Frame.Position = UDim2.new(0.5, -210, 1, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Frame.BorderSizePixel = 0
+Frame.BackgroundTransparency = 0.1
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
+
+-- Glow
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(90, 180, 255)
+UIStroke.Transparency = 0.2
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 6)
+Title.Text = "🔒 ShadowCore Access"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 22
+Title.TextColor3 = Color3.fromRGB(90,180,255)
+Title.Parent = Frame
+
+-- Info
+local Info = Instance.new("TextLabel")
+Info.BackgroundTransparency = 1
+Info.Size = UDim2.new(1, -20, 0, 44)
+Info.Position = UDim2.new(0, 10, 0, 46)
+Info.TextWrapped = true
+Info.Text = "Get your key from LootLabs:"
+Info.Font = Enum.Font.Gotham
+Info.TextSize = 15
+Info.TextColor3 = Color3.fromRGB(220,220,220)
+Info.Parent = Frame
+
+-- Copy Link Button
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(0, 160, 0, 34)
+CopyBtn.Position = UDim2.new(0.5, -80, 0, 90)
+CopyBtn.Text = "📋 Copy Link"
+CopyBtn.Font = Enum.Font.GothamBold
+CopyBtn.TextSize = 15
+CopyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0, 10)
+CopyBtn.Parent = Frame
+
+-- Key Box
+local KeyBox = Instance.new("TextBox")
+KeyBox.Size = UDim2.new(1, -40, 0, 36)
+KeyBox.Position = UDim2.new(0, 20, 0, 140)
+KeyBox.PlaceholderText = "Enter ShadowCore Key..."
+KeyBox.Text = ""
+KeyBox.Font = Enum.Font.Gotham
+KeyBox.TextSize = 16
+KeyBox.TextColor3 = Color3.fromRGB(255,255,255)
+KeyBox.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 10)
+KeyBox.Parent = Frame
+
+-- Verify Button
+local VerifyBtn = Instance.new("TextButton")
+VerifyBtn.Size = UDim2.new(0, 160, 0, 40)
+VerifyBtn.Position = UDim2.new(0.5, -80, 0, 190)
+VerifyBtn.Text = "🔑 Verify Key"
+VerifyBtn.Font = Enum.Font.GothamBold
+VerifyBtn.TextSize = 16
+VerifyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+VerifyBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+Instance.new("UICorner", VerifyBtn).CornerRadius = UDim.new(0, 10)
+VerifyBtn.Parent = Frame
+
+-- Footer
+local Footer = Instance.new("TextLabel")
+Footer.BackgroundTransparency = 1
+Footer.Size = UDim2.new(1, -10, 0, 20)
+Footer.Position = UDim2.new(0, 5, 1, -22)
+Footer.Text = "Powered by ShadowCore"
+Footer.Font = Enum.Font.Gotham
+Footer.TextSize = 13
+Footer.TextColor3 = Color3.fromRGB(140,140,140)
+Footer.Parent = Frame
+
+-- Animate in
+TweenService:Create(Frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    Position = UDim2.new(0.5, -210, 0.5, -130)
+}):Play()
+
+-- Copy link
+CopyBtn.MouseButton1Click:Connect(function()
+    setclipboard(lootlabsLink)
+    CopyBtn.Text = "✅ Copied!"
+    CopyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 110)
+    task.wait(1.2)
+    CopyBtn.Text = "📋 Copy Link"
+    CopyBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+end)
+
+-- ======================= MAIN SCRIPT =======================
+local function loadMainScript()
+    -- Load Fluent UI libraries
+    local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/Beta.lua"))()
+    local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+    local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+    -- Init Fluent Window
+    local Window = Fluent:CreateWindow({
+        Title = "ShadowCore | by Sin",
+        SubTitle = "Premium Script Hub",
+        TabWidth = 160,
+        Size = UDim2.fromOffset(460, 300),
+        Acrylic = true,
+        Theme = "Rose"
+    })
+
 local Tabs = {
     Main        = Window:AddTab({ Title = "Main", Icon = "home" }),
     Automation  = Window:AddTab({ Title = "Automation", Icon = "cog" }),
@@ -29,6 +143,9 @@ local Tabs = {
     Settings    = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
+    -----------------------------------------------------------------
+    -- ======================= Features (Example) ===================
+    -----------------------------------------------------------------
 -----------------------------------------------------------------
 -- ======================= Main Tab ============================
 -----------------------------------------------------------------
@@ -860,7 +977,7 @@ Tabs.AutoBandage:AddToggle("Gluttony_Enabled", {
     end
 })
 -----------------------------------------------------------------
--- ======================= Bring Stuff Tab ======================
+-- ======================= Exploit Bring Stuff Tab ======================
 -----------------------------------------------------------------
 local BringStuffTab = Tabs and Tabs.BringStuff or nil
 if not BringStuffTab then
@@ -868,7 +985,6 @@ if not BringStuffTab then
     return
 end
 
--- ================= Lists =================
 local itemsList = {
     "Log", "Scraps", "Bolt", "Sheet Metal", "UFO", "Junk",
     "Broken Fan", "Broken Radio", "UFO Component", "Tyre",
@@ -879,20 +995,16 @@ local itemsList = {
     "Wolf Pelt", "Alpha Wolf Pelt", "Good Sac", "Strong Axe", "Good Axe",
     "Leather Body", "Iron Body", "Thorn Body"
 }
-
-local treesList = {
-    "Small Tree", "Big Tree"
-}
-
 local selectedItems = {}
 local bringRange = 1000
+local bringSoundName = "BringSound"
 
--- ================= UI Sections =================
-BringStuffTab:AddSection("Items")
+-- ========== UI ===========
+BringStuffTab:AddSection("Exploit: Bring Real Items")
 
 BringStuffTab:AddSlider("BringRangeSlider", {
     Title = "Bring Range",
-    Description = "Maximum distance to bring items/trees",
+    Description = "Max distance to bring items",
     Default = 1000,
     Min = 50,
     Max = 5000,
@@ -900,11 +1012,7 @@ BringStuffTab:AddSlider("BringRangeSlider", {
     Callback = function(val)
         bringRange = val
         if Fluent and Fluent.Notify then
-            Fluent:Notify({
-                Title = "Bring Range",
-                Content = "Set bring range to: " .. tostring(val),
-                Duration = 2
-            })
+            Fluent:Notify({Title="Bring Range", Content="Set bring range to "..val, Duration=2})
         end
     end
 })
@@ -917,117 +1025,107 @@ BringStuffTab:AddDropdown("ItemsToBring", {
     Callback = function(selected)
         selectedItems = selected
         if Fluent and Fluent.Notify then
-            Fluent:Notify({
-                Title = "Items Selected",
-                Content = "Selected items: " .. table.concat(selected, ", "),
-                Duration = 3
-            })
+            Fluent:Notify({Title="Items Selected", Content="Selected: "..table.concat(selected, ", "), Duration=2})
         end
     end
 })
 
--- ================= Helper Functions =================
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local confirmCatchRemote = ReplicatedStorage:WaitForChild("RemoteEvents"):FindFirstChild("ConfirmCatchItem")
+BringStuffTab:AddButton({
+    Title = "Select All",
+    Description = "Select all items",
+    Callback = function()
+        selectedItems = {}
+        for _, item in ipairs(itemsList) do
+            table.insert(selectedItems, item)
+        end
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({Title="Select All", Content="All items selected.", Duration=2})
+        end
+    end
+})
 
-local function confirmCatch(obj)
-    if not confirmCatchRemote or not obj then return end
-    pcall(function()
-        confirmCatchRemote:InvokeServer(obj) -- notify server item is caught
-    end)
+BringStuffTab:AddButton({
+    Title = "Deselect All",
+    Description = "Clear selection",
+    Callback = function()
+        selectedItems = {}
+        if Fluent and Fluent.Notify then
+            Fluent:Notify({Title="Deselect All", Content="All items deselected.", Duration=2})
+        end
+    end
+})
+
+-- ========== Helper Functions ===========
+local function getRoot()
+    local p = game.Players.LocalPlayer
+    return p and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function getRoot()
-    local player = game.Players.LocalPlayer
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        return player.Character.HumanoidRootPart
-    end
-    return nil
+local function getItemPart(obj)
+    return obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
 end
 
 local function isWithinRange(obj, root, range)
-    if not obj or not root then return false end
-    local pos = obj.Position or (obj:IsA("Model") and obj.PrimaryPart and obj.PrimaryPart.Position)
-    if not pos then return false end
-    return (pos - root.Position).Magnitude <= range
+    local part = getItemPart(obj)
+    return part and (part.Position - root.Position).Magnitude <= range
 end
 
-local function dropFromInventory(itemName)
-    local remote = ReplicatedStorage:WaitForChild("RemoteEvents"):FindFirstChild("RequestDropItem")
-    if remote then
-        pcall(function()
-            remote:InvokeServer(itemName)
-        end)
+local function playBringSound()
+    local rs = game:GetService("ReplicatedStorage")
+    local s = rs:FindFirstChild(bringSoundName)
+    if s and s:IsA("Sound") then
+        local c = s:Clone()
+        c.Parent = workspace
+        c:Play()
+        game:GetService("Debris"):AddItem(c, c.TimeLength or 2)
+    end
+end
+
+local function exploitTeleport(obj, root, offset)
+    local part = getItemPart(obj)
+    if part and root then
+        obj:SetPrimaryPartCFrame(root.CFrame + (offset or Vector3.new(math.random(-5,5), 2, math.random(-5,5))))
         return true
     end
     return false
 end
 
--- =========== SAFE DROP! ===========
-local function dropNearPlayer(obj, root)
-    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-    if not part or not root then return end
-    -- Drop 8-20 studs away from player, random direction, safe height
-    local safeDistance = 8 + math.random(4, 12)
-    local angle = math.random() * math.pi * 2
-    local offset = Vector3.new(math.cos(angle) * safeDistance, 3, math.sin(angle) * safeDistance)
-    part.CFrame = root.CFrame + offset
-end
-
-local function simulatePickup(obj, root)
-    if not root or not obj then return end
-    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-    if not part then return end
-    firetouchinterest(root, part, 0)
-    firetouchinterest(root, part, 1)
-end
-
-local function teleportTreeNearPlayer(obj, root, treeIndex)
-    local treePart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-    if not treePart then return end
-    local angle = (treeIndex or 1) * (math.pi * 2 / 6)
-    local radius = 10 + ((treeIndex or 1) * 5)
-    local offset = Vector3.new(math.cos(angle) * radius, 10, math.sin(angle) * radius)
-    treePart.CFrame = root.CFrame + offset
-end
-
--- ================= Buttons =================
-
--- ========================= Exploit Bring Real Items (Visible to All Players) =========================
--- Replaces "safe drop + confirm" logic with a true exploit: moves the REAL model for all to see/collect.
+-- ========== Exploit Buttons ==========
 
 BringStuffTab:AddButton({
     Title = "Exploit Bring Selected Items",
-    Description = "Brings the actual selected items to your location (real, visible to all, can be collected by anyone).",
+    Description = "Moves real selected items to you (visible to all)",
     Callback = function()
         local root = getRoot()
         if not root or #selectedItems == 0 then
             if Fluent and Fluent.Notify then
-                Fluent:Notify({
-                    Title = "Exploit Bring Items",
-                    Content = "No items selected or player not ready.",
-                    Duration = 3
-                })
+                Fluent:Notify({Title="Exploit Bring", Content="No items selected or player not ready.", Duration=3})
+            end
+            return
+        end
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if not itemsFolder then
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({Title="Exploit Bring", Content="Items folder missing.", Duration=3})
             end
             return
         end
 
-        local count = 0
-        local itemsFolder = workspace:FindFirstChild("Items")
-        if itemsFolder then
-            for _, obj in pairs(itemsFolder:GetChildren()) do
-                if table.find(selectedItems, obj.Name) and isWithinRange(obj, root, bringRange) and obj:IsA("Model") and obj.PrimaryPart then
-                    -- Move the actual model to your position (visible to all, truly collectable)
-                    obj:SetPrimaryPartCFrame(root.CFrame + Vector3.new(math.random(-4,4), 2, math.random(-4,4)))
+        local count, failed = 0, 0
+        for i, obj in ipairs(itemsFolder:GetChildren()) do
+            if table.find(selectedItems, obj.Name) and isWithinRange(obj, root, bringRange) and obj:IsA("Model") then
+                if exploitTeleport(obj, root, Vector3.new(math.cos(i)*8, 2, math.sin(i)*8)) then
                     count = count + 1
+                else
+                    failed = failed + 1
                 end
             end
         end
-
+        if count > 0 then playBringSound() end
         if Fluent and Fluent.Notify then
             Fluent:Notify({
-                Title = "Exploit Bring Items",
-                Content = ("Moved %d selected real item(s) to you (within %d studs, visible to all)!"):format(count, bringRange),
+                Title = "Exploit Bring",
+                Content = ("Moved %d item(s) (skipped %d, range %d)").format(count, failed, bringRange),
                 Duration = 4
             })
         end
@@ -1036,40 +1134,66 @@ BringStuffTab:AddButton({
 
 BringStuffTab:AddButton({
     Title = "Exploit Bring All Items",
-    Description = "Brings ALL real items to your location (visible to all, can be picked up by anyone).",
+    Description = "Moves ALL real items to you (visible to all)",
     Callback = function()
         local root = getRoot()
         if not root then
             if Fluent and Fluent.Notify then
-                Fluent:Notify({
-                    Title = "Exploit Bring Items",
-                    Content = "Player not ready.",
-                    Duration = 3
-                })
+                Fluent:Notify({Title="Exploit Bring", Content="Player not ready.", Duration=3})
+            end
+            return
+        end
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if not itemsFolder then
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({Title="Exploit Bring", Content="Items folder missing.", Duration=3})
             end
             return
         end
 
-        local count = 0
-        local itemsFolder = workspace:FindFirstChild("Items")
-        if itemsFolder then
-            for _, obj in pairs(itemsFolder:GetChildren()) do
-                if table.find(itemsList, obj.Name) and isWithinRange(obj, root, bringRange) and obj:IsA("Model") and obj.PrimaryPart then
-                    obj:SetPrimaryPartCFrame(root.CFrame + Vector3.new(math.random(-8,8), 2, math.random(-8,8)))
+        local count, failed = 0, 0
+        for i, obj in ipairs(itemsFolder:GetChildren()) do
+            if table.find(itemsList, obj.Name) and isWithinRange(obj, root, bringRange) and obj:IsA("Model") then
+                if exploitTeleport(obj, root, Vector3.new(math.cos(i)*8, 2, math.sin(i)*8)) then
                     count = count + 1
+                else
+                    failed = failed + 1
                 end
             end
         end
-
+        if count > 0 then playBringSound() end
         if Fluent and Fluent.Notify then
             Fluent:Notify({
-                Title = "Exploit Bring Items",
-                Content = ("Moved %d real item(s) to you (within %d studs, visible to all)!"):format(count, bringRange),
+                Title = "Exploit Bring",
+                Content = ("Moved %d item(s) (skipped %d, range %d)").format(count, failed, bringRange),
                 Duration = 4
             })
         end
     end
 })
+
+BringStuffTab:AddButton({
+    Title = "Show Bring Range",
+    Description = "Briefly visualize your bring range.",
+    Callback = function()
+        local root = getRoot()
+        if not root then return end
+        local sphere = Instance.new("Part")
+        sphere.Shape = Enum.PartType.Ball
+        sphere.Anchored = true
+        sphere.CanCollide = false
+        sphere.Transparency = 0.8
+        sphere.Color = Color3.fromRGB(50,200,255)
+        sphere.Size = Vector3.new(bringRange*2, bringRange*2, bringRange*2)
+        sphere.CFrame = root.CFrame
+        sphere.Parent = workspace
+        game:GetService("Debris"):AddItem(sphere, 2)
+    end
+})
+
+-----------------------------------------------------------------
+-- End of Exploit Bring Stuff Tab
+---------------------------------------------------------
 
 
 
@@ -1520,10 +1644,10 @@ do
         end
     end)
 end
------------------------------------------------------------------
--- ======================= Settings Tab =========================
------------------------------------------------------------------
-do
+
+    -----------------------------------------------------------------
+    -- ======================= Settings Tab =========================
+    -----------------------------------------------------------------
     SaveManager:SetLibrary(Fluent)
     InterfaceManager:SetLibrary(Fluent)
     SaveManager:IgnoreThemeSettings()
@@ -1534,20 +1658,20 @@ do
     SaveManager:BuildConfigSection(Tabs.Settings)
 end
 
------------------------------------------------------------------
--- ========== Advanced Minimize Button (Draggable, Toggle) ======
------------------------------------------------------------------
+-- Verify Key
+VerifyBtn.MouseButton1Click:Connect(function()
+    if KeyBox.Text == correctKey then
+        VerifyBtn.Text = "✅ Verified!"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 110)
+        task.wait(0.6)
 
------------------------------------------------------------------
--- ======================= Initialize GUI =======================
------------------------------------------------------------------
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "SaveManager", "InterfaceManager" })
-InterfaceManager:SetFolder("ShadowCore")
-SaveManager:SetFolder("ShadowCore/saves")
-InterfaceManager:BuildInterfaceSection(Window)
-SaveManager:BuildConfigSection(Window)
-
-SaveManager:LoadAutoloadConfig()
+        ScreenGui:Destroy() -- CLOSE KEY GUI
+        loadMainScript() -- RUN HUB
+    else
+        VerifyBtn.Text = "❌ Invalid Key"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.2)
+        VerifyBtn.Text = "🔑 Verify Key"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+    end
+end)
