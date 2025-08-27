@@ -1,0 +1,147 @@
+-- ======================= ShadowCore Key System =======================
+-- CONFIG
+local lootlabsLink = "https://loot-link.com/s?0zpUxvqA"        -- Your monetized link
+local correctKey   = "SHADOWCORE3256"                          -- Main key
+
+-- Services
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+
+-- GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Name = "ShadowCore_KeySystem"
+ScreenGui.Parent = CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 420, 0, 260)
+Frame.Position = UDim2.new(0.5, -210, 0.5, -120)
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Frame.BorderSizePixel = 0
+Frame.BackgroundTransparency = 0.1
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
+
+-- Glow effect
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(90, 180, 255)
+UIStroke.Transparency = 0.2
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 6)
+Title.Text = "🔒 ShadowCore Access"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 22
+Title.TextColor3 = Color3.fromRGB(90,180,255)
+Title.Parent = Frame
+
+-- Info
+local Info = Instance.new("TextLabel")
+Info.BackgroundTransparency = 1
+Info.Size = UDim2.new(1, -20, 0, 44)
+Info.Position = UDim2.new(0, 10, 0, 46)
+Info.TextWrapped = true
+Info.Text = "Get your key from LootLabs:"
+Info.Font = Enum.Font.Gotham
+Info.TextSize = 15
+Info.TextColor3 = Color3.fromRGB(220,220,220)
+Info.Parent = Frame
+
+-- Copy Link Button
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(0, 160, 0, 34)
+CopyBtn.Position = UDim2.new(0.5, -80, 0, 90)
+CopyBtn.Text = "📋 Copy Link"
+CopyBtn.Font = Enum.Font.GothamBold
+CopyBtn.TextSize = 15
+CopyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0, 10)
+CopyBtn.Parent = Frame
+
+-- Key Box
+local KeyBox = Instance.new("TextBox")
+KeyBox.Size = UDim2.new(1, -40, 0, 36)
+KeyBox.Position = UDim2.new(0, 20, 0, 140)
+KeyBox.PlaceholderText = "Enter ShadowCore Key..."
+KeyBox.Text = ""
+KeyBox.Font = Enum.Font.Gotham
+KeyBox.TextSize = 16
+KeyBox.TextColor3 = Color3.fromRGB(255,255,255)
+KeyBox.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 10)
+KeyBox.Parent = Frame
+
+-- Verify Button
+local VerifyBtn = Instance.new("TextButton")
+VerifyBtn.Size = UDim2.new(0, 160, 0, 40)
+VerifyBtn.Position = UDim2.new(0.5, -80, 0, 190)
+VerifyBtn.Text = "🔑 Verify Key"
+VerifyBtn.Font = Enum.Font.GothamBold
+VerifyBtn.TextSize = 16
+VerifyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+VerifyBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+Instance.new("UICorner", VerifyBtn).CornerRadius = UDim.new(0, 10)
+VerifyBtn.Parent = Frame
+
+-- Footer
+local Footer = Instance.new("TextLabel")
+Footer.BackgroundTransparency = 1
+Footer.Size = UDim2.new(1, -10, 0, 20)
+Footer.Position = UDim2.new(0, 5, 1, -22)
+Footer.Text = "Powered by ShadowCore"
+Footer.Font = Enum.Font.Gotham
+Footer.TextSize = 13
+Footer.TextColor3 = Color3.fromRGB(140,140,140)
+Footer.Parent = Frame
+
+-- Animations
+Frame.Position = UDim2.new(0.5, -210, 1, 0)
+TweenService:Create(Frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    Position = UDim2.new(0.5, -210, 0.5, -130)
+}):Play()
+
+-- Copy link logic
+CopyBtn.MouseButton1Click:Connect(function()
+    setclipboard(lootlabsLink)
+    CopyBtn.Text = "✅ Copied!"
+    CopyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 110)
+    task.wait(1.2)
+    CopyBtn.Text = "📋 Copy Link"
+    CopyBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+end)
+
+-- ===============================================
+-- LOAD MAIN SHADOWCORE SCRIPT AFTER KEY CHECK
+-- ===============================================
+local function loadMainUI()
+    -- ======================= Load Libraries =======================
+    local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/Beta.lua", true))()
+    local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+    local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+    
+    -- ======================= ShadowCore Main GUI =======================
+    -- (Put ALL of your ShadowCore GUI code here — ESP, Tabs, Features, etc.)
+end
+
+-- Key System Logic
+VerifyBtn.MouseButton1Click:Connect(function()
+    if KeyBox.Text == correctKey then
+        VerifyBtn.Text = "✅ Verified!"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 110)
+        task.wait(0.6)
+        ScreenGui:Destroy()
+        loadMainUI() -- Run your actual ShadowCore GUI
+    else
+        VerifyBtn.Text = "❌ Invalid Key"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        task.wait(1.2)
+        VerifyBtn.Text = "🔑 Verify Key"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+    end
+end)
