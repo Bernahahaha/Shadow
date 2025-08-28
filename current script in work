@@ -124,7 +124,7 @@ local function loadMainScript()
     -- Init Fluent Window
     local Window = Fluent:CreateWindow({
         Title = "ShadowCore | by Sin",
-        SubTitle = "Premium Script Hub",
+        SubTitle = "99 Nights Script (Free)",
         TabWidth = 160,
         Size = UDim2.fromOffset(460, 300),
         Acrylic = true,
@@ -173,22 +173,26 @@ do
         end
     })
 
-    -- Quick Settings
-    Tabs.Main:AddSection("Quick Settings")
-    Tabs.Main:AddToggle("ThemeToggle", {
-        Title = "Dark Theme",
-        Default = true,
-        Callback = function(state)
-            if Fluent and Fluent.SetTheme then
-                Fluent:SetTheme(state and "Dark" or "Light")
-                Fluent:Notify({
-                    Title = "Theme Changed",
-                    Content = "Theme set to " .. (state and "Dark" or "Light"),
-                    Duration = 3
-                })
-            end
+-- Quick Settings
+Tabs.Main:AddSection("Quick Settings")
+
+Tabs.Main:AddToggle("ThemeToggle", {
+    Title = "Midnight Theme",
+    Default = true,
+    Callback = function(state)
+        if Fluent and Fluent.SetTheme then
+            -- Use "Midnight" for the dark theme, "Light" for the light theme.
+            local themeName = state and "Midnight" or "Light"
+            Fluent:SetTheme(themeName)
+            Fluent:Notify({
+                Title = "Theme Changed",
+                Content = "Theme set to " .. themeName,
+                Duration = 3
+            })
         end
-    })
+    end
+})
+
 
     -- Social Links
     Tabs.Main:AddSection("Socials")
@@ -233,7 +237,7 @@ do
 end
 
 -----------------------------------------------------------------
--- ======================= Automation Tab ======================
+-- ======================= Automation Tab (No Cooldown Kill Aura) ======================
 -----------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -244,8 +248,6 @@ local LocalPlayer = Players.LocalPlayer
 ---------------------------- Kill Aura --------------------------
 local KillAuraEnabled = false
 local attackRange = 300
-local attackCooldown = 0.5
-local lastAttackTimes = {}
 local useWhitelist = true
 local attackAllAtOnce = false
 local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword","Katana"}
@@ -287,20 +289,13 @@ local function isTargetValid(target, hrp)
     return dist <= attackRange
 end
 
-Tabs.Automation:AddSection("Kill Aura (Advanced)")
+Tabs.Automation:AddSection("Kill Aura (No Cooldown)")
 Tabs.Automation:AddSlider("KA_Range", {
     Title = "Attack Range",
     Description = "Distance to attack mobs",
     Default = attackRange,
     Min = 50, Max = 500, Rounding = 0,
     Callback = function(v) attackRange = v end
-})
-Tabs.Automation:AddSlider("KA_Cooldown", {
-    Title = "Attack Cooldown",
-    Description = "Delay between hits",
-    Default = attackCooldown,
-    Min = 0.1, Max = 2, Rounding = 2,
-    Callback = function(v) attackCooldown = v end
 })
 Tabs.Automation:AddToggle("KA_Whitelist", {
     Title = "Use Target Whitelist",
@@ -322,22 +317,22 @@ Tabs.Automation:AddDropdown("KA_WeaponPriority", {
     end
 })
 Tabs.Automation:AddToggle("KA_Enabled", {
-    Title = "Kill Aura (Advanced)",
+    Title = "Kill Aura (No Cooldown)",
     Default = false,
     Callback = function(enabled)
         KillAuraEnabled = enabled
         if enabled then
-            notify("Kill Aura", "Enabled", 3)
+            notify("Kill Aura", "Enabled (No Cooldown)", 3)
             local RemoteToolDamage = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("ToolDamageObject")
             task.spawn(function()
                 while KillAuraEnabled do
                     local hrp = getHRP()
-                    if not hrp then task.wait(0.5) continue end
+                    if not hrp then task.wait(0.1) continue end
                     local weapon = findBestWeapon()
-                    if not weapon or not RemoteToolDamage then task.wait(1) continue end
+                    if not weapon or not RemoteToolDamage then task.wait(0.2) continue end
                     local ownerId = weapon:GetAttribute("Owner") or ""
                     local charactersFolder = Workspace:FindFirstChild("Characters")
-                    if not charactersFolder then task.wait(0.5) continue end
+                    if not charactersFolder then task.wait(0.1) continue end
 
                     if attackAllAtOnce then
                         local hits = 0
@@ -351,26 +346,21 @@ Tabs.Automation:AddToggle("KA_Enabled", {
                         if hits > 0 then
                             notify("Kill Aura", ("Attacked %d targets."):format(hits), 2)
                         end
-                        task.wait(attackCooldown)
+                        -- No cooldown, instantly attack again
                     else
                         for _, tgt in ipairs(charactersFolder:GetChildren()) do
                             if isTargetValid(tgt, hrp) then
-                                local now = tick()
-                                if not lastAttackTimes[tgt] or (now - lastAttackTimes[tgt]) >= attackCooldown then
-                                    local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
-                                    pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
-                                    lastAttackTimes[tgt] = now
-                                    task.wait(0.05)
-                                end
+                                local args = {tgt, weapon, "3_"..tostring(ownerId), tgt.PrimaryPart.CFrame}
+                                pcall(function() RemoteToolDamage:InvokeServer(unpack(args)) end)
                             end
                         end
-                        task.wait(0.05)
+                        -- No cooldown, instantly attack again
                     end
+                    task.wait() -- yield to avoid freezing
                 end
             end)
         else
             notify("Kill Aura", "Disabled", 3)
-            lastAttackTimes = {}
         end
     end
 })
@@ -996,18 +986,18 @@ local itemsList = {
     "Leather Body", "Iron Body", "Thorn Body"
 }
 local selectedItems = {}
-local bringRange = 1000
+local bringRange = 100
 local bringSoundName = "BringSound"
 
 -- ========== UI ===========
-BringStuffTab:AddSection("Exploit: Bring Real Items")
+BringStuffTab:AddSection("Bring Items(NOT FIXED)")
 
 BringStuffTab:AddSlider("BringRangeSlider", {
     Title = "Bring Range",
     Description = "Max distance to bring items",
-    Default = 1000,
+    Default = 100,
     Min = 50,
-    Max = 5000,
+    Max = 300,
     Rounding = 0,
     Callback = function(val)
         bringRange = val
@@ -1093,7 +1083,7 @@ end
 -- ========== Exploit Buttons ==========
 
 BringStuffTab:AddButton({
-    Title = "Exploit Bring Selected Items",
+    Title = "Bring Selected Items",
     Description = "Moves real selected items to you (visible to all)",
     Callback = function()
         local root = getRoot()
@@ -1133,7 +1123,7 @@ BringStuffTab:AddButton({
 })
 
 BringStuffTab:AddButton({
-    Title = "Exploit Bring All Items",
+    Title = "Bring All Items",
     Description = "Moves ALL real items to you (visible to all)",
     Callback = function()
         local root = getRoot()
@@ -1582,60 +1572,155 @@ do
         if espChestEnabled then highlightChests() end
     end)
 
-    -----------------------------------------------------------------
-    -- Children ESP
-    -----------------------------------------------------------------
-    local ChildrenESPColor = Tabs.Visuals:AddColorpicker("ChildrenEspColor", {
-        Title = "Children ESP Color",
-        Description = "Color + transparency for Lost Child ESP",
-        Transparency = 0,
-        Default = Color3.fromRGB(255, 255, 0)
-    })
+-----------------------------------------------------------------
+-- Children ESP with Distance and Teleport/Dropdown
+-----------------------------------------------------------------
+local ChildrenESPColor = Tabs.Visuals:AddColorpicker("ChildrenEspColor", {
+    Title = "Children ESP Color",
+    Description = "Color + transparency for Lost Child ESP",
+    Transparency = 0,
+    Default = Color3.fromRGB(255, 255, 0)
+})
 
-    Tabs.Visuals:AddToggle("ChildrenESP", {
-        Title = "Children ESP",
-        Description = "Highlights Lost Child, Lost Child2, Lost Child3",
-        Default = false,
-        Callback = function(enabled)
-            local color = ChildrenESPColor.Value
-            local transparency = ChildrenESPColor.Transparency
-            UpdateChildrenESP(enabled, color, transparency)
-        end
-    })
+local kidNames = {"Lost Child", "Lost Child2", "Lost Child3", "Lost Child4"}
+local selectedKid = kidNames[1]
 
-    -- Apply highlight function
-    local function ApplyESP(model, color, transparency)
-        if model:FindFirstChild("ESPHighlight") then
-            model.ESPHighlight:Destroy()
+Tabs.Visuals:AddDropdown("ChildrenESP_KidSelect", {
+    Title = "Select Kid To Save",
+    Description = "Choose which Lost Child to teleport to.",
+    Values = kidNames,
+    Default = kidNames[1],
+    Multi = false,
+    Callback = function(val)
+        selectedKid = val
+    end
+})
+
+Tabs.Visuals:AddButton({
+    Title = "Teleport To Selected Kid",
+    Description = "Teleports you to the selected Lost Child.",
+    Callback = function()
+        local characters = workspace:FindFirstChild("Characters")
+        if not characters then
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({
+                    Title = "Teleport Failed",
+                    Content = "Could not find workspace > Characters!",
+                    Duration = 3
+                })
+            end
+            return
         end
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESPHighlight"
-        highlight.Adornee = model
-        highlight.FillColor = color
-        highlight.FillTransparency = transparency or 0
-        highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-        highlight.OutlineTransparency = 0
-        highlight.Parent = model
+        local kid = characters:FindFirstChild(selectedKid)
+        if kid and kid:IsA("Model") then
+            local hrp = kid:FindFirstChild("HumanoidRootPart") or kid.PrimaryPart
+            local player = game.Players.LocalPlayer
+            if hrp and player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = hrp.CFrame + Vector3.new(0, 3, 0)
+                if Fluent and Fluent.Notify then
+                    Fluent:Notify({
+                        Title = "Teleported",
+                        Content = "You were teleported to " .. selectedKid,
+                        Duration = 3
+                    })
+                end
+            else
+                if Fluent and Fluent.Notify then
+                    Fluent:Notify({
+                        Title = "Teleport Failed",
+                        Content = "Could not find HumanoidRootPart for kid or player!",
+                        Duration = 3
+                    })
+                end
+            end
+        else
+            if Fluent and Fluent.Notify then
+                Fluent:Notify({
+                    Title = "Teleport Failed",
+                    Content = "Selected kid not found!",
+                    Duration = 3
+                })
+            end
+        end
+    end
+})
+
+Tabs.Visuals:AddToggle("ChildrenESP", {
+    Title = "Children ESP",
+    Description = "Highlights Lost Child, Lost Child2, Lost Child3, Lost Child4 and shows distance",
+    Default = false,
+    Callback = function(enabled)
+        local color = ChildrenESPColor.Value
+        local transparency = ChildrenESPColor.Transparency
+        UpdateChildrenESP(enabled, color, transparency)
+    end
+})
+
+local function ApplyESP(model, color, transparency)
+    if model:FindFirstChild("ESPHighlight") then
+        model.ESPHighlight:Destroy()
+    end
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPHighlight"
+    highlight.Adornee = model
+    highlight.FillColor = color
+    highlight.FillTransparency = transparency or 0
+    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+    highlight.OutlineTransparency = 0
+    highlight.Parent = model
+
+    -- Add BillboardGui for distance display
+    if model:FindFirstChild("DistanceGui") then
+        model.DistanceGui:Destroy()
     end
 
-    -- Update function
-    function UpdateChildrenESP(enabled, color, transparency)
-        local characters = workspace:FindFirstChild("Characters")
-        if not characters then return end
+    local hrp = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+    if hrp and game.Players.LocalPlayer and game.Players.LocalPlayer.Character then
+        local playerHRP = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if playerHRP then
+            local distance = (hrp.Position - playerHRP.Position).Magnitude
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "DistanceGui"
+            billboard.Size = UDim2.new(0, 100, 0, 30)
+            billboard.Adornee = hrp
+            billboard.AlwaysOnTop = true
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
 
-        for _, childName in ipairs({"Lost Child", "Lost Child2", "Lost Child3"}) do
-            local model = characters:FindFirstChild(childName)
-            if model and model:IsA("Model") then
-                if enabled then
-                    ApplyESP(model, color, transparency)
-                else
-                    if model:FindFirstChild("ESPHighlight") then
-                        model.ESPHighlight:Destroy()
-                    end
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Parent = billboard
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextColor3 = color
+            textLabel.TextStrokeTransparency = 0.5
+            textLabel.TextScaled = true
+            textLabel.Font = Enum.Font.SourceSansBold
+            textLabel.Text = string.format("Distance: %.1f", distance)
+            billboard.Parent = hrp
+        end
+    end
+end
+
+function UpdateChildrenESP(enabled, color, transparency)
+    local characters = workspace:FindFirstChild("Characters")
+    if not characters then return end
+
+    for _, childName in ipairs(kidNames) do
+        local model = characters:FindFirstChild(childName)
+        if model and model:IsA("Model") then
+            if enabled then
+                ApplyESP(model, color, transparency)
+            else
+                if model:FindFirstChild("ESPHighlight") then
+                    model.ESPHighlight:Destroy()
+                end
+                local hrp = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+                if hrp and hrp:FindFirstChild("DistanceGui") then
+                    hrp.DistanceGui:Destroy()
                 end
             end
         end
     end
+end
 
     -- React to colorpicker changes
     ChildrenESPColor:OnChanged(function(color)
