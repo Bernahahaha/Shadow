@@ -919,7 +919,7 @@ end
 -- ======================= Gluttony (Auto Consume Dropped Food) - Auto Bandage Tab =======================
 local GluttonyEnabled = false
 local consumeRange = 50
-local validFoods = {"Morsel","Steak","Carrot","Berry","Cooked Morsel","Cooked Steak"}
+local validFoods = {"Carrot","Berry","Cooked Morsel","Cooked Steak","Cake"}
 
 local function isFood(item)
     for _, name in ipairs(validFoods) do
