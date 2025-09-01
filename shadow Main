@@ -252,7 +252,8 @@ local attackAllAtOnce = false
 local weaponPriority = {"Old Axe","Good Axe","Strong Axe","Spear","MorningStar","Laser Sword","Ice Sword","Katana"}
 local allTargets = {
     "Bunny","Cultist","Wolf","Alpha Wolf","Bear","Polar Bear","Alien","Alien Elite",
-    "Arctic Fox","Black Robe Cultist","Red Robe Cultist","Crossbow Cultist"
+    "Arctic Fox","Black Robe Cultist","Red Robe Cultist","Crossbow Cultist",
+    "Green Frog","Blue Frog","Purple Frog","Red Frog King","Mammoth"
 }
 local targetWhitelist = {}
 for _, n in ipairs(allTargets) do targetWhitelist[n] = true end
@@ -288,7 +289,7 @@ local function isTargetValid(target, hrp)
     return dist <= attackRange
 end
 
-Tabs.Automation:AddSection("Kill Aura (No Cooldown)")
+Tabs.Automation:AddSection("Kill Aura")
 Tabs.Automation:AddSlider("KA_Range", {
     Title = "Attack Range",
     Description = "Distance to attack mobs",
@@ -307,7 +308,7 @@ Tabs.Automation:AddToggle("KA_AllAtOnce", {
     Callback = function(v) attackAllAtOnce = v end
 })
 Tabs.Automation:AddDropdown("KA_WeaponPriority", {
-    Title = "Weapon Priority (Display)",
+    Title = "Weapon Priority",
     Values = weaponPriority,
     Default = weaponPriority[1],
     Multi = false,
@@ -316,7 +317,7 @@ Tabs.Automation:AddDropdown("KA_WeaponPriority", {
     end
 })
 Tabs.Automation:AddToggle("KA_Enabled", {
-    Title = "Kill Aura (No Cooldown)",
+    Title = "Kill Aura",
     Default = false,
     Callback = function(enabled)
         KillAuraEnabled = enabled
@@ -560,7 +561,7 @@ if Tabs and Tabs.Automation then
 
     Tabs.Automation:AddButton({
         Title = "Bring All Small Trees to Player",
-        Description = "Moves all real Small Trees within 300 studs of you to the specified player. Trees remain real and drop Logs when destroyed.",
+        Description = "Moves all real Small Trees to the specified player. Trees will drop Logs when destroyed.",
         Callback = function()
             local targetName = (_G.TargetBringPlayer or ""):gsub("^%s*(.-)%s*$", "%1")
             if targetName == "" then
@@ -578,7 +579,7 @@ if Tabs and Tabs.Automation then
 
     Tabs.Automation:AddButton({
         Title = "Show Health GUI for All Small Trees",
-        Description = "Creates/updates a health bar on every Small Tree (no clones).",
+        Description = "Creates/updates a health bar on every Small Tree.",
         Callback = guiAllSmallTrees
     })
 end
@@ -895,7 +896,7 @@ end
 do
     local AutoBandage = Tabs.AutoBandage:AddToggle("AutoBandage", {
         Title = "Auto Bandage",
-        Description = "Automatically heals your player.",
+        Description = "Hold a Bandage to Work",
         Default = false
     })
     AutoBandage:OnChanged(function(State)
@@ -927,7 +928,7 @@ local function isFood(item)
     return false
 end
 
-Tabs.AutoBandage:AddSection("Gluttony")
+Tabs.AutoBandage:AddSection("Auto Eat")
 Tabs.AutoBandage:AddSlider("Gluttony_Range", {
     Title = "Consume Range",
     Description = "Max distance to auto eat dropped food",
@@ -936,7 +937,7 @@ Tabs.AutoBandage:AddSlider("Gluttony_Range", {
     Callback = function(v) consumeRange = v end
 })
 Tabs.AutoBandage:AddToggle("Gluttony_Enabled", {
-    Title = "Gluttony",
+    Title = "Auto Eat",
     Default = false,
     Callback = function(enabled)
         GluttonyEnabled = enabled
@@ -1260,7 +1261,7 @@ end
 -----------------------------------------------------------------
 do
     Tabs.Teleport:AddInput("TeleportInput", {
-        Title = "Teleport To (x,y,z)",
+        Title = "Teleport To",
         Default = "0,0,0",
         Placeholder = "Enter coordinates like 0,5,0",
         Callback = function(Value)
