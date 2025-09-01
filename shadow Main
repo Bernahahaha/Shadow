@@ -988,7 +988,7 @@ end
 local selectedTeleportItems = {}
 local bringRange = 100
 
-BringStuffTab:AddSection("Teleport Food Items (Fluent Multi-Select)")
+BringStuffTab:AddSection("FOODS")
 
 BringStuffTab:AddSlider("BringRangeSlider", {
     Title = "Bring Range",
@@ -1144,7 +1144,7 @@ end
 local selectedTeleportItems = {}
 local bringRange = 100
 
-BringStuffTab:AddSection("Teleport Resource Items (Fluent Multi-Select)")
+BringStuffTab:AddSection("FUEL")
 
 BringStuffTab:AddSlider("BringRangeSlider", {
     Title = "Bring Range",
@@ -1302,7 +1302,7 @@ end
 local selectedTeleportItems = {}
 local bringRange = 100
 
-BringStuffTab:AddSection("Teleport Resource Items (Fluent Multi-Select)")
+BringStuffTab:AddSection("MATERIALS")
 
 BringStuffTab:AddSlider("BringRangeSlider", {
     Title = "Bring Range",
@@ -1491,7 +1491,7 @@ BringStuffTab:AddDropdown("TeleportItemsDropdown", {
 
 BringStuffTab:AddButton({
     Title = "Select All",
-    Description = "Select all teleportable items",
+    Description = "Bring Selected Items",
     Callback = function()
         selectedTeleportItems = {}
         for _, item in ipairs(teleportableItems) do
@@ -1543,8 +1543,8 @@ local function unlockItem(item)
 end
 
 BringStuffTab:AddButton({
-    Title = "Teleport Selected Items",
-    Description = "Teleport all selected items to you (uses game pickup logic and range)",
+    Title = "Bring Selected Items",
+    Description = "Bring all selected Items",
     Callback = function()
         local root = getRoot()
         if not root then
@@ -1616,7 +1616,7 @@ end
 local selectedTeleportItems = {}
 local bringRange = 100
 
-BringStuffTab:AddSection("Teleport Resource Items (Fluent Multi-Select)")
+BringStuffTab:AddSection("ARMOR/SWORD")
 
 BringStuffTab:AddSlider("BringRangeSlider", {
     Title = "Bring Range",
@@ -1648,7 +1648,7 @@ BringStuffTab:AddDropdown("TeleportItemsDropdown", {
 
 BringStuffTab:AddButton({
     Title = "Select All",
-    Description = "Select all teleportable items",
+    Description = "Select all items!",
     Callback = function()
         selectedTeleportItems = {}
         for _, item in ipairs(teleportableItems) do
@@ -1662,7 +1662,7 @@ BringStuffTab:AddButton({
 
 BringStuffTab:AddButton({
     Title = "Deselect All",
-    Description = "Clear teleport selection",
+    Description = "Clear Bring selection",
     Callback = function()
         selectedTeleportItems = {}
         if Fluent and Fluent.Notify then
@@ -1700,8 +1700,8 @@ local function unlockItem(item)
 end
 
 BringStuffTab:AddButton({
-    Title = "Teleport Selected Items",
-    Description = "Teleport all selected items to you (uses game pickup logic and range)",
+    Title = "Bring Selected Items",
+    Description = "Bring Selected Items to you",
     Callback = function()
         local root = getRoot()
         if not root then
