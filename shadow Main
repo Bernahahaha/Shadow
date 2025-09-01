@@ -1551,7 +1551,7 @@ do
     end
 
     Tabs.Visuals:AddToggle("ESPChest", {
-        Title = "Chest ESP (Simple)",
+        Title = "Chest ESP",
         Description = "Highlights all Item Chest models",
         Default = false,
         Callback = function(val)
