@@ -551,9 +551,9 @@ end
 -- ========== GUI Integration for Fluent ==========
 if Tabs and Tabs.Automation then
     Tabs.Automation:AddInput("BringTreeTargetInput", {
-        Title = "Target Player Name for Bring Tree",
+        Title = "Target Player",
         Default = "",
-        Placeholder = "Enter part or full player name",
+        Placeholder = "full player name",
         Callback = function(val)
             _G.TargetBringPlayer = val
         end
@@ -597,7 +597,7 @@ Tabs.Automation:AddButton({
         if not root then return end
         local count = 0
         for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Name == "Log" then
+            if obj:IsA("Model") and obj.Name == "Log" then
                 obj.CFrame = root.CFrame + Vector3.new(0,5,0)
                 count = count + 1
             end
